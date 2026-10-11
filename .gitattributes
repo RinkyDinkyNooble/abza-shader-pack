@@ -1,0 +1,7 @@
+# Files are stored byte for byte
+* -text
+
+*.png binary
+*.jpg binary
+*.gif binary
+*.webp binary

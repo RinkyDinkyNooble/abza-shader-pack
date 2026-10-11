@@ -1,0 +1,64 @@
+//
+//  ABZA Shader: volumetric light and fog at half resolution (composite5_a, before composite5)
+//
+
+layout(local_size_x = 8, local_size_y = 8) in;
+const vec2 workGroupsRender = vec2(0.5, 0.5);
+
+#define ABZA_VL_PASS
+
+#include "/abza/VolumetricSettings.glsl"
+#include "/settings/CloudSettings.glsl"
+#include "/settings/GlobalSettings.glsl"
+
+vec4 abzaPixel = vec4(0.0);
+#define CLOUD_PIXEL abzaPixel
+
+#include "/libs/Uniform.glsl"
+#include "/libs/Common.glsl"
+#include "/libs/Atmosphere.glsl"
+#include "/libs/Cloud.glsl"
+#include "/libs/GbufferData.glsl"
+#include "/libs/Shadow.glsl"
+
+vec3 skyColorUp = vec3(0.0);
+
+#include "/abza/VolumetricLight.glsl"
+
+shared vec3 abzaSharedSkyColorUp;
+
+void main() {
+    #if defined ABZA_HALF_RES_VL && defined VOLUMETRIC_LIGHT && (defined SHADOW_AND_SKY || defined END_FLASH)
+        #if defined SHADOW_AND_SKY && ABZA_AIR == 1
+            if (gl_LocalInvocationIndex == 0u) {
+                abzaSharedSkyColorUp = atmosphereScatteringUp(sunDirection.y, 30.0);
+            }
+            barrier();
+            skyColorUp = abzaSharedSkyColorUp;
+        #endif
+
+        ivec2 halfTexel = ivec2(gl_GlobalInvocationID.xy);
+        if (any(greaterThanEqual(halfTexel, ivec2(screenSize * 0.5)))) {
+            return;
+        }
+        ivec2 texel = halfTexel * 2;
+        vec2 coord = (vec2(texel) + 0.5) * texelSize;
+        float waterDepth = texelFetch(depthtex0, texel, 0).r;
+        vec3 waterViewPos;
+        #ifdef LOD
+            if (waterDepth == 1.0) {
+                waterViewPos = screenToViewPosLod(coord, getLodDepthWater(coord));
+            } else
+        #endif
+        {
+            waterViewPos = screenToViewPos(coord, waterDepth);
+        }
+        float rayLength = length(waterViewPos);
+        vec3 worldDir = normalize(mat3(gbufferModelViewInverse) * waterViewPos);
+        float marchLength = abzaVLMarchLength(worldDir, rayLength);
+
+        vec4 light = abzaVolumetricLight(worldDir, marchLength, bayer64Temporal(vec2(halfTexel) + 0.5));
+        light = abzaVLAccumulate(light, worldDir, rayLength, marchLength);
+        abzaVLStore(halfTexel, light, vec4(marchLength, abzaVLFrameTag(frameCounter), 0.0, 0.0));
+    #endif
+}

@@ -1,0 +1,1 @@
+Shader pack made for the ABZA modpack: its own sky, light and fog for every Ad Astra world, glowing ores and steady exposure. A fork of Sundial Lite.

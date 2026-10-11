@@ -1,0 +1,15 @@
+# Claude Code
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+
+# Release builds
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Private notes
+/research
