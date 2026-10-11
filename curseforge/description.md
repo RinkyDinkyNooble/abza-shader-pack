@@ -69,4 +69,4 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 
 ### Credit
 
-**Sundial Lite** is made by GeForceLegend and released under the GNU General Public License v3.0 ([GitHub](https://github.com/GeForceLegend/Sundial-Lite), [Modrinth](https://modrinth.com/shader/sundial-lite), [CurseForge](https://www.curseforge.com/minecraft/shaders/sundial-lite)). ABZA Shader is an independent fork, not affiliated with or endorsed by GeForceLegend. The source is on [GitHub](https://github.com/RinkyDinkyNooble/abza-shader-pack).
+**Sundial Lite** is made by GeForceLegend and released under the GNU General Public License v3.0 ([GitHub](https://github.com/GeForceLegend/Sundial-Lite), [Modrinth](https://modrinth.com/shader/sundial-lite), [CurseForge](https://www.curseforge.com/minecraft/shaders/sundial-lite)). ABZA Shader is an independent fork, not affiliated with or endorsed by GeForceLegend, released under the same licence. The source is on [GitHub](https://github.com/RinkyDinkyNooble/abza-shader-pack).

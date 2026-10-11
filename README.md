@@ -64,11 +64,11 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 
 ## Credits and licence
 
-- **Sundial Lite** is made by GeForceLegend and released under the GNU General Public License v3.0 ([GitHub](https://github.com/GeForceLegend/Sundial-Lite), [Modrinth](https://modrinth.com/shader/sundial-lite), [CurseForge](https://www.curseforge.com/minecraft/shaders/sundial-lite)). ABZA Shader is an independent fork, not affiliated with or endorsed by GeForceLegend.
+- **Sundial Lite** is made by GeForceLegend and released under the GNU General Public License v3.0 ([GitHub](https://github.com/GeForceLegend/Sundial-Lite), [Modrinth](https://modrinth.com/shader/sundial-lite), [CurseForge](https://www.curseforge.com/minecraft/shaders/sundial-lite)). ABZA Shader is an independent fork, not affiliated with or endorsed by GeForceLegend, released under the same licence.
 - Sundial's own readme and changelog are included as `Sundial-Readme.md` and `Sundial-Changelog.md`. Code Sundial includes from others keeps its original notices in the files.
 
 ## Files
 
 - `shaders/abza/`: ABZA's own code. `shaders/abza/worlds/` holds each world's settings.
 - `shaders/world0` and `shaders/world_*`: one folder per world, mapped in `shaders/dimension.properties`. They are copies of the root programs with each world's defines.
-- Everything else under `shaders/` is Sundial Lite v1.2.0, with the edits listed in `CHANGES.md`.
+- Everything else under `shaders/` is Sundial Lite v1.2.0 with ABZA's changes.
