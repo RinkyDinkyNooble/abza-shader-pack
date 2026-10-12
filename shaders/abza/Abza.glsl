@@ -2,7 +2,7 @@
 //  ABZA Shader: settings and per-world configuration
 //
 
-#define ABZA_SHADER v1_0_0 // [v1_0_0]
+#define ABZA_SHADER v1_0_1 // [v1_0_1]
 
 // Shadow filtering
     #define SHADOW_EDGE_SOFTNESS 0.5 // [0.25 0.5 0.75 1.0 1.5 2.0]

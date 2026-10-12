@@ -144,7 +144,7 @@ void main() {
     #endif
     #ifdef GLOWING_ORES
         if (material >= ABZA_ORE_FIRST && material <= ABZA_ORE_LAST) {
-            rawData.emissive = max(rawData.emissive, abzaOreGlow(rawData.albedo.rgb, material));
+            abzaOreGlow(rawData, color, material);
         }
     #endif
     bool isCauldronWater = material == 8192;

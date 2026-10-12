@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1 (2026-10-12)
+
+- Glowing ores glow evenly next to other blocks: ore near edges and corners no longer loses its glow, and the stone around it no longer sparkles.
+
 ## 1.0.0 (2026-10-10)
 
 First version, for the ABZA modpack: Minecraft 1.20.1, Forge 47 and Oculus 1.8.0. Based on Sundial Lite v1.2.0.

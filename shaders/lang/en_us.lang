@@ -640,7 +640,7 @@ option.SHADOW_DISTORTION_FIX.comment=Fixes some shadows on very large faces. Slo
 
 option.ABZA_SHADER=ABZA Shader
 option.ABZA_SHADER.comment=Sundial Lite by GeForceLegend, adapted for the ABZA modpack. GPL-3.0.
-value.ABZA_SHADER.v1_0_0=1.0.0
+value.ABZA_SHADER.v1_0_1=1.0.1
 option.entityShadowDistanceMul=Entity shadow distance
 option.entityShadowDistanceMul.comment=How far entities cast shadows, as a share of the shadow distance (0.5 at 80 blocks is 40 blocks). Lower is faster in crowds
 option.SHADOW_ENTITIES=Entity shadows
