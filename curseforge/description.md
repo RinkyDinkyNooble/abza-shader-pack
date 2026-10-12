@@ -15,8 +15,6 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 
 ### Presets
 
-"Profile" on the main shader screen sets every performance option at once. Any option can still be changed by hand afterwards.
-
 | Preset | What it sets |
 |---|---|
 | Potato | Every costly effect off or at its lowest; a 256-pixel shadow map out to 16 blocks, no mob shadows |
