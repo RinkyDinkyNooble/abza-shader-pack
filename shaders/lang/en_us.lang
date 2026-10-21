@@ -634,13 +634,13 @@ option.AUTHOR.comment=Sundial Lite by GeForceLegend: https://afdian.net/a/geforc
 option.GLOWING_OVERLAY=Glowing entities overlay
 option.GLOWING_OVERLAY.comment=Draws the outline of glowing entities (the Glowing effect) on top of everything. Looks wrong with depth of field
 option.UNDERGROUND_MODE=Underground mode
-option.UNDERGROUND_MODE.comment=Turns off the sky, sunlight and shadows everywhere, for a large speed-up in worlds you only play underground. Always on in the Nether and the End
+option.UNDERGROUND_MODE.comment=Turns off sunlight, sky light and shadows everywhere, for a speed-up in worlds you only play underground. The sky is still drawn. Always on in the Nether and the End
 option.SHADOW_DISTORTION_FIX=Shadow distortion fix
 option.SHADOW_DISTORTION_FIX.comment=Fixes some shadows on very large faces. Slower
 
 option.ABZA_SHADER=ABZA Shader
 option.ABZA_SHADER.comment=Sundial Lite by GeForceLegend, adapted for the ABZA modpack. GPL-3.0.
-value.ABZA_SHADER.v1_0_1=1.0.1
+value.ABZA_SHADER.v1_0_2=1.0.2
 option.entityShadowDistanceMul=Entity shadow distance
 option.entityShadowDistanceMul.comment=How far entities cast shadows, as a share of the shadow distance (0.5 at 80 blocks is 40 blocks). Lower is faster in crowds
 option.SHADOW_ENTITIES=Entity shadows

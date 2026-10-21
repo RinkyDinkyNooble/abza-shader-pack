@@ -76,8 +76,10 @@ float abzaVLMarchLength(vec3 worldDir, float rayLength) {
     return min(maxAllowedDistance, rayLength);
 }
 
+#if defined SHADOW_AND_SKY || defined END_FLASH
 // Sundial's volumetric light and fog march (Composite5) for one view ray of marchLength from the eye.
 // Returns the light scattered toward the camera (rgb) and the fog transmittance (a): the result is color * a + rgb.
+// Uses the shadow functions of libs/Shadow.glsl, defined only with SHADOW_AND_SKY or END_FLASH.
 vec4 abzaVolumetricLight(vec3 worldDir, float marchLength, float noise) {
     vec4 result = vec4(0.0, 0.0, 0.0, 1.0);
     if (isEyeInWater >= 2) {
@@ -175,6 +177,7 @@ vec4 abzaVolumetricLight(vec3 worldDir, float marchLength, float noise) {
     }
     return result;
 }
+#endif
 
 #ifdef ABZA_VL_PASS
     layout(rgba16f) uniform image2D abzaVL0;
