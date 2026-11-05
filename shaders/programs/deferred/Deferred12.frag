@@ -309,6 +309,10 @@ vec4 screenSpaceVisibiliyBitmask(vec3 originViewPos, vec3 normal, vec2 texcoord,
 
             for (int j = 0; j < VB_STEPS; j++) {
                 vec2 sampleCoord = originCoord + stepDir * stepSize;
+                // Off screen: stop before fetching depth there
+                if (any(greaterThan(floatBitsToUint(sampleCoord), floatBitsToUint(screenEdge)))) {
+                    break;
+                }
                 ivec2 sampleTexel = ivec2(sampleCoord * screenSize);
                 float sampleDepth = uintBitsToFloat(texelFetch(colortex6, sampleTexel, 0).r);
                 stepSize *= stepScale;
@@ -320,10 +324,6 @@ vec4 screenSpaceVisibiliyBitmask(vec3 originViewPos, vec3 normal, vec2 texcoord,
                     sampleViewPos.xy = sampleViewPos.xy * upscaleRatio + upscaleRatio - 1.0;
                 #endif
                 sampleViewPos.xy = vec2(gbufferProjectionInverse[0].x, gbufferProjectionInverse[1].y) * sampleViewPos.xy + gbufferProjectionInverse[3].xy;
-
-                if (any(greaterThan(floatBitsToUint(sampleCoord), floatBitsToUint(screenEdge)))) {
-                    break;
-                }
                 if (abs(sampleDepth) != 1.0) {
                     float isHand = float(sampleDepth > 1.0);
                     #ifdef LOD
@@ -370,6 +370,20 @@ vec4 screenSpaceVisibiliyBitmask(vec3 originViewPos, vec3 normal, vec2 texcoord,
                         }
                     #endif
                     occBits = occBits | occBits0;
+                    // The slice is fully occluded, so later samples add no light and no occlusion.
+                    // With ambient occlusion they can still add crease shading, but only within CREASE_SHADING_RADIUS of the origin:
+                    // later samples lie on pixel rays at a wider angle from the origin, so no nearer than this ray is (1.1 keeps rounding clear).
+                    if (occBits == 0xFFFFFFFFu) {
+                        #ifdef AMBIENT_OCCLUSION
+                            float rayAlong = max(dot(originViewPos, sampleViewPos) * inversesqrt(dot(sampleViewPos, sampleViewPos)), 0.0);
+                            float rayDistSq = dot(originViewPos, originViewPos) - rayAlong * rayAlong;
+                            if (creaseBits == 0xFFFFFFFFu || rayDistSq > 1.1 * CREASE_SHADING_RADIUS * CREASE_SHADING_RADIUS) {
+                                break;
+                            }
+                        #else
+                            break;
+                        #endif
+                    }
                 }
             }
             float occ0 = float(CountBits(occBits)) * (1.0 / 32.0);

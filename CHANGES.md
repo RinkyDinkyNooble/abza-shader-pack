@@ -2,6 +2,11 @@
 
 ABZA Shader is based on Sundial Lite v1.2.0 by GeForceLegend (GPL-3.0). This file lists every change, newest first.
 
+## Unreleased
+
+- Faster ambient occlusion and ray-traced bounce light where a surface is fully enclosed (caves, under overhangs, between blocks): the trace stops once nothing further can change the result. The image is unchanged.
+- Faster light shafts in shadow: points already in full shadow skip the water caustic and tinted-glass lookups. The image is unchanged.
+
 ## 1.0.5 (2026-11-04)
 
 - Stained glass, ice and other untinted translucent blocks no longer split diagonally next to solid blocks. Modded fluids with a grey tint or none no longer get the water look.
