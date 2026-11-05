@@ -433,7 +433,8 @@ void main() {
         float blendWeight = clamp(1.0 / colorData.w, 0.0, 1.0);
         currData = mix(prevData, currData, blendWeight);
         crease = abzaCrease(texel, isOriginNotHand, blendWeight, float(ABZA_VB_TRACES));
-        colorData.rgb = abzaCreaseDirect(colorData.rgb, gbufferData.albedo.rgb, gbufferData.emissive, crease);
+        float historyShare = abzaHistoryShare(colorData.w);
+        colorData.rgb = abzaCreaseDirect(colorData.rgb, gbufferData.albedo.rgb, gbufferData.emissive, crease * historyShare);
 
         vec3 lightColor = vec3(BASIC_LIGHT);
         #ifdef MOD_NIGHT_VISION_COMPAT
@@ -450,11 +451,11 @@ void main() {
                 (skyColorUp * 0.8 + sunColor * 2.0 * ABZA_AMBIENT * SHADE_FILL * SUNLIGHT_BRIGHTNESS * (1.0 - (0.75 + 0.25 * float(CLOUD_TYPE != 2)) * weatherStrength)) *
                 (1.0 - 0.75 * (1.0 - exp2(-RF_DENSITY * 4.0)) * weatherStrength);
         #endif
-        lightColor *= (1.0 - currData.w * (1.0 - 0.15 * blendWeight));
+        lightColor *= (1.0 - currData.w * historyShare * (1.0 - 0.15 * blendWeight));
         #ifdef VBGI
             lightColor += currData.rgb;
         #endif
-        lightColor *= abzaCreaseLight(crease, 1.0);
+        lightColor *= abzaCreaseLight(crease * historyShare, 1.0);
 
         float diffuseWeight = pow(1.0 - gbufferData.smoothness, 5.0);
         vec3 f0 = vec3(0.04);

@@ -22,6 +22,7 @@ layout(location = 0) out vec4 texBuffer0;
 layout(location = 1) out vec4 texBuffer5;
 layout(location = 2) out uint texBuffer6;
 layout(location = 3) out float texBuffer10;
+layout(location = 4) out vec2 texBuffer12;
 
 in vec2 texcoord;
 in vec2 prevHandAnimation;
@@ -40,7 +41,7 @@ in vec2 temporalHandRotation;
     uniform vec2 prevTaaOffset;
 #endif
 
-vec2 getPrevCoord(out vec3 prevViewPos, vec3 viewPos, vec3 worldGeoNormal, float parallaxOffset, float materialID) {
+vec2 getPrevCoord(out vec3 prevViewPos, vec3 viewPos, vec3 worldGeoNormal, float parallaxOffset, float materialID, vec3 movement) {
     vec3 prevScreenPos;
     if (materialID == MAT_HAND) {
         prevViewPos = viewPos;
@@ -56,7 +57,7 @@ vec2 getPrevCoord(out vec3 prevViewPos, vec3 viewPos, vec3 worldGeoNormal, float
         prevScreenPos = viewToProjectionPos(prevViewPos);
         prevScreenPos.z *= MC_HAND_DEPTH;
     } else {
-        vec3 prevWorldPos = viewToWorldPos(viewPos) + cameraMovement;
+        vec3 prevWorldPos = viewToWorldPos(viewPos) + movement;
         prevViewPos = prevWorldToViewPos(prevWorldPos);
         vec3 prevViewNormal = mat3(gbufferPreviousModelView) * worldGeoNormal;
         prevViewPos -= parallaxOffset * prevViewPos / max(dot(prevViewPos, -prevViewNormal), 1e-5);
@@ -93,8 +94,9 @@ vec4 samplePrevData(vec2 sampleTexelCoord, vec3 prevViewPos, vec3 geoNormal, out
     }
 
     vec3 positionDiff = prevSampleViewPos - prevViewPos;
-    float positionDistance = abs(dot(positionDiff, geoNormal)) / (dot(prevSampleViewPos, prevSampleViewPos) + 2.0) * 5000.0;
+    float positionDistance = abs(dot(positionDiff, geoNormal)) / (dot(prevSampleViewPos, prevSampleViewPos) + 2.0) * abzaPrevPositionScale;
     isPrevValid *= clamp(1.0 - positionDistance, 0.0, 1.0) * step(abs(prevSampleDepth), 0.999999);
+    isPrevValid *= abzaSameEntityPoint(sampleTexel);
 
     return vec4(prevSampleData);
 }
@@ -113,6 +115,7 @@ vec4 prevVisibilityBitmask(vec2 prevCoord, vec3 prevWorldPos, vec3 geoNormal, in
     vec4 dataAccum = vec4(0.0);
     float framesAccum = 0.0;
     float weightAccum = 0.0;
+    abzaCreaseHistory = 0.0;
     float sampleOffsetX = -0.5;
     for (int i = 0; i < 2; i++) {
         float sampleOffsetY = -0.5;
@@ -165,9 +168,22 @@ void main() {
         vec3 worldGeoNormal = normalize(mat3(gbufferModelViewInverse) * gbufferData.geoNormal);
 
         vec3 prevViewPos;
-        vec2 prevCoord = getPrevCoord(prevViewPos, viewPos, worldGeoNormal, gbufferData.parallaxOffset, gbufferData.materialID);
+        abzaEntityCoordData = isHand ? vec4(0.0) : texelFetch(colortex11, texel, 0);
+        vec2 prevCoord = getPrevCoord(prevViewPos, viewPos, worldGeoNormal, gbufferData.parallaxOffset, gbufferData.materialID, cameraMovement);
 
         prevData = prevVisibilityBitmask(prevCoord, prevViewPos, worldGeoNormal, prevFrames);
+        if (prevFrames < 0.5 && abzaEntityCoordData.z > 0.0) {
+            // Entities carried along with the camera, such as a vehicle being ridden: fixed on screen, then turned by the camera alone
+            abzaPrevPositionScale = 500.0;
+            abzaEntityCoordReach = 4.0;
+            vec3 carriedNormal = gbufferData.geoNormal * mat3(gbufferPreviousModelView);
+            prevCoord = getPrevCoord(prevViewPos, viewPos, carriedNormal, gbufferData.parallaxOffset, gbufferData.materialID, prevViewToWorldPos(viewPos) - viewToWorldPos(viewPos));
+            prevData = prevVisibilityBitmask(prevCoord, prevViewPos, carriedNormal, prevFrames);
+            if (prevFrames < 0.5) {
+                prevCoord = getPrevCoord(prevViewPos, viewPos, worldGeoNormal, gbufferData.parallaxOffset, gbufferData.materialID, vec3(0.0));
+                prevData = prevVisibilityBitmask(prevCoord, prevViewPos, worldGeoNormal, prevFrames);
+            }
+        }
     }
     if (texel.y < 1 && texel.x < 4) {
         if (texel.x > 1) {
@@ -181,6 +197,7 @@ void main() {
     texBuffer5 = prevData;
     texBuffer6 = floatBitsToUint(gbufferData.depth);
     texBuffer10 = abzaCreaseHistory;
+    texBuffer12 = abzaEntityCoordData.xy;
 }
 
-/* RENDERTARGETS: 0,5,6,10 */
+/* RENDERTARGETS: 0,5,6,10,12 */

@@ -19,6 +19,9 @@
 layout(location = 0) out vec4 gbufferData0;
 layout(location = 1) out vec4 gbufferData1;
 layout(location = 2) out vec4 gbufferData2;
+#ifdef ENTITIES
+    layout(location = 3) out vec4 entityCoordData;
+#endif
 
 in vec4 color;
 in vec4 texlmcoord;
@@ -393,6 +396,9 @@ void main() {
     }
 
     packUpGbufferDataSolid(rawData, gbufferData0, gbufferData1, gbufferData2);
+    #ifdef ENTITIES
+        entityCoordData = abzaEntityCoord(texlmcoord.st);
+    #endif
 }
 
 /* DRAWBUFFERS:012 */

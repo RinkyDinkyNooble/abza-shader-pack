@@ -108,7 +108,7 @@ float getClosestDepth(vec2 coord) {
     return closest;
 }
 
-vec3 calculateVelocity(vec3 coord, ivec2 texel, float materialID, float parallaxOffset) {
+vec3 calculateVelocity(vec3 coord, ivec2 texel, float materialID, float parallaxOffset, vec3 movement) {
     vec3 view = coord;
     vec3 geoNormal = decodeNormal(texelFetch(colortex2, texel, 0).xy);
     float handDepth = view.z / MC_HAND_DEPTH - 0.5 / MC_HAND_DEPTH + 0.5;
@@ -144,7 +144,7 @@ vec3 calculateVelocity(vec3 coord, ivec2 texel, float materialID, float parallax
         if (coord.z - float(coord.z > 1.0) < 1.0 && materialID != MAT_END_PORTAL) {
             view += view * parallaxOffset / max(dot(geoNormal, -view), 1e-5);
             view = viewToWorldPos(view);
-            view += cameraMovement;
+            view += movement;
             view = prevWorldToViewPos(view);
 
             vec3 prevViewNormal = mat3(gbufferPreviousModelView) * mat3(gbufferModelViewInverse) * geoNormal;
@@ -243,12 +243,21 @@ void main() {
     vec3 closest = vec3(texcoord, closestDepth);
 
     float materialID = 2.0 * clamp(centerDepth * -1e+10, 0.0, 1.0) + 4.0 * clamp(-centerData.w, 0.0, 1.0);
-    vec3 velocity = calculateVelocity(closest, texel, materialID, abs(centerData.w) * PARALLAX_DEPTH * 0.2);
+    vec3 velocity = calculateVelocity(closest, texel, materialID, abs(centerData.w) * PARALLAX_DEPTH * 0.2, cameraMovement);
     velocity = velocity * clamp(inversesqrt(dot(velocity.st, velocity.st)), 0.0, 1.0);
 
     float blendWeight = 1.0;
     #ifdef TAA
         float depthDiffFactor = getDepthConfidenceFactor(closest, velocity);
+        if (depthDiffFactor < 0.5) {
+            // Surfaces carried along with the camera, such as a vehicle being ridden
+            vec3 carriedVelocity = calculateVelocity(closest, texel, materialID, abs(centerData.w) * PARALLAX_DEPTH * 0.2, vec3(0.0));
+            carriedVelocity = carriedVelocity * clamp(inversesqrt(dot(carriedVelocity.st, carriedVelocity.st)), 0.0, 1.0);
+            depthDiffFactor = getDepthConfidenceFactor(closest, carriedVelocity);
+            if (depthDiffFactor > 0.5) {
+                velocity = carriedVelocity;
+            }
+        }
 
         blendWeight *= TAA_HISTORY_WEIGHT - TAA_HISTORY_WEIGHT * min(0.8, 4.5 * pow(dot(velocity.xy, velocity.xy), 0.25)) * step(closest.z, 0.999999);
         blendWeight *= float(all(lessThan(floatBitsToUint(closest.st + velocity.st), floatBitsToUint(screenEdge))));

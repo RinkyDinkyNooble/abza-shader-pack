@@ -77,7 +77,9 @@ void main() {
 
     materialID = int(mc_Entity.x);
     #ifdef MOD_WATER_DETECTION
-        if (dot(gl_Color.rgb, vec3(1.0)) < 2.999 && mc_Entity.x < -0.5) {
+        // Ambient occlusion scales all channels equally, so only a tint colour differs between them
+        vec3 vertexTint = gl_Color.rgb;
+        if (max(vertexTint.r, max(vertexTint.g, vertexTint.b)) - min(vertexTint.r, min(vertexTint.g, vertexTint.b)) > 0.002 && mc_Entity.x < -0.5) {
             materialID = 8192;
         }
     #endif
