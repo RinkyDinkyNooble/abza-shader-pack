@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.10 (2026-11-06)
+
+- No more white flash around your hand, tools and guns when they move.
+- Ground that comes into view from behind moving things settles faster, with less sparkle.
+- Slightly faster light shafts in shade with Water caustic or Coloured shadows on (High, Ultra and Max).
+
 ## 1.0.5 (2026-11-04)
 
 - Stained glass, ice and other untinted translucent blocks no longer split diagonally next to solid blocks. Modded fluids with a grey tint or none no longer get the water look.

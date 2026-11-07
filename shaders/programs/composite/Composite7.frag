@@ -21,6 +21,7 @@
 layout(location = 0) out vec4 texBuffer3;
 layout(location = 1) out vec4 texBuffer4;
 layout(location = 2) out vec4 texBuffer5;
+layout(location = 3) out float texBuffer13;
 
 in float smoothCenterDepth;
 in vec2 texcoord;
@@ -247,6 +248,7 @@ void main() {
     velocity = velocity * clamp(inversesqrt(dot(velocity.st, velocity.st)), 0.0, 1.0);
 
     float blendWeight = 1.0;
+    float historyFrames = 0.0;
     #ifdef TAA
         float depthDiffFactor = getDepthConfidenceFactor(closest, velocity);
         if (depthDiffFactor < 0.5) {
@@ -262,6 +264,8 @@ void main() {
         blendWeight *= TAA_HISTORY_WEIGHT - TAA_HISTORY_WEIGHT * min(0.8, 4.5 * pow(dot(velocity.xy, velocity.xy), 0.25)) * step(closest.z, 0.999999);
         blendWeight *= float(all(lessThan(floatBitsToUint(closest.st + velocity.st), floatBitsToUint(screenEdge))));
         blendWeight *= depthDiffFactor;
+        historyFrames = abzaHistoryFrames(closest.st + velocity.st, blendWeight);
+        blendWeight = min(blendWeight, historyFrames / (historyFrames + 1.0));
         #if SR_ENABLE
             blendWeight = 0.0;
         #endif
@@ -271,6 +275,7 @@ void main() {
         velocity.st *= upscaleRatio;
     #endif
     texBuffer5 = vec4(velocity.st, 0.0, blendWeight);
+    texBuffer13 = historyFrames / 255.0;
 }
 
-/* DRAWBUFFERS:345 */
+/* RENDERTARGETS: 3,4,5,13 */

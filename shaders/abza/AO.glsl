@@ -47,11 +47,6 @@ float abzaSameEntityPoint(ivec2 sampleTexel) {
     return float(all(lessThanEqual(coordDiff, abzaEntityCoordData.zw * abzaEntityCoordReach + 3e-5)));
 }
 
-// Share of ambient occlusion and crease shading shown on a pixel: none on the first frame of history, all from the fifth
-float abzaHistoryShare(float blendedFrames) {
-    return clamp(0.25 * blendedFrames - 0.25, 0.0, 1.0);
-}
-
 // Crease occlusion of a previous-frame texel
 float abzaPrevCrease(vec2 sampleTexel) {
     #ifdef AMBIENT_OCCLUSION

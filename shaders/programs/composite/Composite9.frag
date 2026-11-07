@@ -88,14 +88,17 @@ void resolverAABB(ivec2 texel, out vec3 avgColor, out vec3 variance, float varia
 }
 
 vec3 getCurrColorNeighborhood(ivec2 texel, vec3 currColor) {
-    vec3 colorAccum = currColor;
+    vec4 colorAccum = vec4(currColor, 1.0);
+    float centerDepth = texelFetch(depthtex0, texel, 0).r;
+    ivec2 lastTexel = ivec2(screenSize) - 1;
     for (int i = -1; i < 2; i += 2) {
         for (int j = -1; j < 2; j += 2) {
-            colorAccum += texelFetch(colortex3, texel + ivec2(i, j), 0).rgb;
+            ivec2 sampleTexel = clamp(texel + ivec2(i, j), ivec2(0), lastTexel);
+            float sampleWeight = float(texelFetch(depthtex0, sampleTexel, 0).r >= centerDepth);
+            colorAccum += vec4(texelFetch(colortex3, sampleTexel, 0).rgb, 1.0) * sampleWeight;
         }
     }
-    colorAccum *= 0.2;
-    return currColor;
+    return colorAccum.rgb / colorAccum.a;
 }
 
 vec3 catmullRomFilter(vec2 prevCoord) {
