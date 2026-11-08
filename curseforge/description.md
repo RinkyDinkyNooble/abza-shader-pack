@@ -15,12 +15,15 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 
 ### Presets
 
+"Profile" on the main shader screen sets every performance option at once. "ABZA modpack", on the same screen, makes water on Earth reflect the modpack's large square sun: Standard turns it off, ABZA on, and the other presets leave it as it is.
+
 | Preset | What it sets |
 |---|---|
 | Potato | Every costly effect off or at its lowest; a 256-pixel shadow map out to 16 blocks, no mob shadows |
-| ABZA (default) | The balanced preset the pack is tuned at: 1024-pixel shadows out to 80 blocks, reflections, clouds, light shafts, ambient occlusion |
-| High | ABZA with 2048-pixel shadows, sharper ground textures, depth of field and underwater caustics |
-| Ultra | ABZA with 4096-pixel shadows, coloured shadows from glass, cloud shadows, underwater caustics, reflections on every surface that isn't fully rough, and sharper ground textures |
+| Standard (default) | The balanced preset the pack is tuned at: 1024-pixel shadows out to 80 blocks, reflections, clouds, light shafts, ambient occlusion |
+| ABZA | Standard with "ABZA modpack" on |
+| High | Standard with 2048-pixel shadows, sharper ground textures, depth of field and underwater caustics |
+| Ultra | Standard with 4096-pixel shadows, coloured shadows from glass, cloud shadows, underwater caustics, depth of field, reflections on every surface that isn't fully rough, and sharper ground textures |
 | Max | Ultra with ray-traced bounce light (4 rays per pixel) and no cave adaptation |
 
 ### Gallery
@@ -54,7 +57,7 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 
 ### Outside the modpack
 
-- The large square sun, the moon and the planets in Earth's sky come from the modpack's Ad Astra sky files, not from the shader. Without them, Earth shows Minecraft's usual sun and moon, and the shader lights the world from those.
+- The large square sun, the moon and the planets in Earth's sky come from the modpack's Ad Astra sky files, not from the shader. Without them, Earth shows Minecraft's usual sun and moon, and the shader lights the world from those. Keep "ABZA modpack" off there, so water reflects Minecraft's sun at its own size.
 - Interloper, Cinder, Eden, Umbra and their orbits exist only in the modpack. The Moon and the Earth and Moon orbits come with Ad Astra.
 - Dimensions from other mods use the pack's base settings: Sundial's look with ABZA's shared changes. The Nether and the End use Sundial's own.
 - Glowing ores cover the modpack's ore mods; ores from other mods render normally.
@@ -62,7 +65,6 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 ### Known issues
 
 - Taking a TaCZ gun for the first time can show long dark spikes under the terrain. Reloading shaders (F3+R) fixes it; stock Sundial does it too.
-- Outside the modpack, water reflects a square sun about twice the size of Minecraft's sun.
 - Zombie Awareness's blood marks aren't drawn with shaders on.
 
 ### Credit

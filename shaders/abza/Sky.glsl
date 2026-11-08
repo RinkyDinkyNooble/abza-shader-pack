@@ -2,6 +2,16 @@
 //  ABZA Shader: sky objects drawn by Ad Astra
 //
 
+// Half-size of the star's texels on its square, as a share of the square: Ad Astra's sun.png fills it,
+// Minecraft's sun.png has its 8 x 8 sun in the middle of 32 x 32 texels
+#ifdef ABZA_MODPACK
+    #define ABZA_STAR_FILL 1.0
+#elif ABZA_VANILLA_SKY == 1
+    #define ABZA_STAR_FILL 0.25
+#else
+    #define ABZA_STAR_FILL 1.0
+#endif
+
 #ifdef ABZA_STAR_SCALE
     // Position on the square Ad Astra draws the star on, -1 to 1 across it (2 when the direction faces away).
     // The star turns with the time of day around the world Z axis, at 100 blocks from the camera.
@@ -26,12 +36,12 @@ float abzaStarMask(vec3 worldDir, vec3 skyAlbedo) {
     #endif
 }
 
-// The star in reflections: Ad Astra's square in its texture's colours (8 x 8 texels: an outer ring, an inner ring and a 4 x 4 core),
+// The star in reflections: its square in the texture's colours (8 x 8 texels: an outer ring, an inner ring and a 4 x 4 core),
 // as bright as Deferred11 draws it in the sky. Worlds without an Ad Astra star keep Sundial's sun disc.
 vec3 abzaReflectedSun(vec3 worldDir) {
     #ifdef ABZA_STAR_SCALE
         vec2 quadPos = abzaStarQuadPos(worldDir);
-        float ring = max(abs(quadPos.x), abs(quadPos.y));
+        float ring = max(abs(quadPos.x), abs(quadPos.y)) / ABZA_STAR_FILL;
         if (ring >= 1.0) {
             return vec3(0.0);
         }

@@ -2,6 +2,12 @@
 
 ABZA Shader is based on Sundial Lite v1.2.0 by GeForceLegend (GPL-3.0). This file lists every change, newest first.
 
+## 1.0.11 (2026-11-08)
+
+- Outside the ABZA modpack, water and glass reflect a sun the size of Minecraft's own; before, the reflection was four times as wide.
+- New Standard preset, the default: the old ABZA preset, for any modpack. The ABZA preset is now Standard with the new "ABZA modpack" option on, which makes Earth's water reflect the modpack's large square sun. High, Ultra and Max leave that option as it is.
+- Ultra and Max now have depth of field (your hand and held item stay sharp).
+
 ## 1.0.10 (2026-11-06)
 
 - No more white flash around your hand, tools and guns when they move.

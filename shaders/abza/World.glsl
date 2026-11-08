@@ -38,6 +38,11 @@
     #define ABZA_STAR_TEXTURE 0
 #endif
 
+// 1 where the sky outside the ABZA modpack is Minecraft's own, with the sun from Minecraft's sun.png
+#ifndef ABZA_VANILLA_SKY
+    #define ABZA_VANILLA_SKY 0
+#endif
+
 // 1 where the time of day never changes
 #ifndef ABZA_FIXED_TIME
     #define ABZA_FIXED_TIME 0
