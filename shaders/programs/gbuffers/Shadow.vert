@@ -16,6 +16,10 @@
 //  Shadow
 //
 
+#extension GL_ARB_shader_storage_buffer_object : enable
+#extension GL_ARB_shading_language_420pack : enable
+#extension GL_ARB_shader_image_load_store : enable
+
 #if MC_VERSION >= 11700
 in vec4 mc_Entity;
 in vec2 mc_midTexCoord;
@@ -42,10 +46,17 @@ out float distortFixValue;
 #include "/libs/Common.glsl"
 #include "/libs/PhysicsOcean.glsl"
 
+#define ABZA_VOXEL_WRITE
+#include "/abza/Voxels.glsl"
+
 const int shadowMapResolution = 1024; // [64 128 256 512 1024 2048 4096 8192 16384]
 const float realShadowMapResolution = shadowMapResolution * MC_SHADOW_QUALITY;
 
 void main() {
+    #ifdef ABZA_WSR
+        abzaVoxelize(gl_Vertex.xyz, (gl_TextureMatrix[0] * gl_MultiTexCoord0).st, mc_midTexCoord.st, int(mc_Entity.x));
+        abzaCapturePlayer(gl_Vertex.xyz, (gl_TextureMatrix[0] * gl_MultiTexCoord0).st);
+    #endif
     #if defined SHADOW_AND_SKY || defined END_FLASH
         color = gl_Color;
         worldNormal = normalize(mat3(shadowModelViewInverse) * gl_NormalMatrix * gl_Normal);
@@ -136,6 +147,9 @@ void main() {
         worldNormal = vec3(0.0);
         texcoord = vec2(0.0);
         shadowOffset = vec2(0.0);
+        gl_Position = vec4(1.1, 1.1, 1.1, 1.0);
+    #endif
+    #if defined ABZA_WSR && ABZA_DIRECT_LIGHT == 0
         gl_Position = vec4(1.1, 1.1, 1.1, 1.0);
     #endif
 }

@@ -33,6 +33,7 @@ flat in float materialID;
 #include "/libs/GbufferData.glsl"
 #include "/libs/Common.glsl"
 #include "/libs/Water.glsl"
+#include "/abza/WaterWaves.glsl"
 #include "/libs/Parallax.glsl"
 
 void main() {
@@ -87,10 +88,15 @@ void main() {
         rippleNormal.xy *= viewDepthInv / (viewDepthInv + 0.1 * RIPPLE_FADE_SPEED);
     #endif
     #if WATER_TYPE == 0
+        float waveFootprint = abzaWaterFootprint(viewPos.xyz);
         if (materialID == MAT_WATER) {
             rawData.albedo = color;
             vec3 tangentDir = transpose(tbnMatrix) * viewPos.xyz;
-            normal = waterWave(mcPos / 32.0, tangentDir);
+            #ifdef WATER_WAVE_FILTER
+                normal = abzaWaterWave(mcPos / 32.0, tangentDir, waveFootprint);
+            #else
+                normal = waterWave(mcPos / 32.0, tangentDir);
+            #endif
             normal.xy += rippleNormal.xy * wetStrength;
             normal = normalize(tbnMatrix * normal);
         } else

@@ -17,6 +17,8 @@
 //
 
 #extension GL_ARB_gpu_shader5 : enable
+#extension GL_ARB_shader_storage_buffer_object : enable
+#extension GL_ARB_shading_language_420pack : enable
 
 layout(location = 0) out vec4 texBuffer0;
 layout(location = 1) out vec4 texBuffer4;
@@ -24,6 +26,7 @@ layout(location = 1) out vec4 texBuffer4;
 in vec2 texcoord;
 
 #define CLOUD_IN_REFLECTION
+// #define SCREEN_SPACE_REFLECTION_EDGE_FADE
 #define SCREEN_SPACE_REFLECTION_STEP 16 // [2 3 4 5 6 7 8 10 12 14 16 20 24 28 32]
 #define SCREEN_SPACE_REFLECTION_REFINEMENTS 5 // [1 2 3 4 5 6 8 10]
 
@@ -42,6 +45,8 @@ in vec2 texcoord;
 #include "/libs/Cloud.glsl"
 #include "/libs/GbufferData.glsl"
 #include "/abza/Sky.glsl"
+#include "/abza/Reflections.glsl"
+#include "/abza/OffscreenReflections.glsl"
 
 #ifdef ABZA_PLANET_FOG
     #include "/abza/Fog.glsl"
@@ -147,6 +152,7 @@ vec4 reflection(GbufferData gbufferData, float depth, vec3 f0, vec3 f82, float f
     vec3 brdfWeight = reflectionWeight(viewDir, rayDir, f0, f82) * pdfRatio;
     vec3 totalWeight = brdfWeight * firstWeight;
     vec4 reflectionColor = vec4(0.0);
+    vec3 indoorFill = vec3(0.0);
     if (dot(totalWeight, totalWeight) > 1e-6) {
         vec4 projDirection = vec4(vec3(gbufferProjection[0].x, gbufferProjection[1].y, gbufferProjection[2].z) * rayDir, -rayDir.z);
         vec4 originProjPos = vec4(vec3(gbufferProjection[0].x, gbufferProjection[1].y, gbufferProjection[2].z) * viewPos, -viewPos.z);
@@ -154,7 +160,11 @@ vec4 reflection(GbufferData gbufferData, float depth, vec3 f0, vec3 f82, float f
         originProjPos.z += gbufferProjection[3].z;
         originProjPos.xy += gbufferProjection[2].xy * viewPos.z;
         #ifdef TAA
-            originProjPos.xy += taaOffset * originProjPos.w;
+            vec2 taaOffsetScaled = taaOffset;
+            #if SR_ENABLE
+                taaOffsetScaled = upscaleRatio * taaOffsetScaled;
+            #endif
+            originProjPos.xy += taaOffsetScaled * originProjPos.w;
         #endif
         float traceLength = projIntersectionScreenEdge(originProjPos, projDirection);
 
@@ -186,10 +196,17 @@ vec4 reflection(GbufferData gbufferData, float depth, vec3 f0, vec3 f82, float f
         bool hitSky = true;
         float minimumThichness = max(0.001 * originProjScale, abs(stepSize.z)) + 0.03 * float(gbufferData.materialID == MAT_HAND);
         float minimumThichnessLod = max(0.01 * originProjScale, abs(stepSize.w));
-        vec2 offset =
-            vec2(minimumThichness, minimumThichnessLod) -
-            max(vec2(0.001 * originProjScale, 0.01 * originProjScale), vec2(minimumThichness, minimumThichnessLod) * clamp(exp2(-SCREEN_SPACE_REFLECTION_REFINEMENTS + 1.0), 0.0, 1.0));
-        for (int i = 0; i < SCREEN_SPACE_REFLECTION_STEP; i++) {
+        #ifdef ABZA_OFFSCREEN_REFLECTION
+            vec4 mirrorReflection;
+            int mirrorResult = -1;
+            if (gbufferData.materialID != MAT_HAND) {
+                mirrorResult = abzaMirrorFirst(viewPos, gbufferData.geoNormal, rayDir, mirrorReflection);
+            }
+            int reflectionSteps = mirrorResult < 0 ? SCREEN_SPACE_REFLECTION_STEP : 0;
+        #else
+            const int reflectionSteps = SCREEN_SPACE_REFLECTION_STEP;
+        #endif
+        for (int i = 0; i < reflectionSteps; i++) {
             float sampleDepth = uintBitsToFloat(textureLod(colortex6, sampleCoord.st, 0.0).x);
             sampleDepth -= float(sampleDepth > 1.0);
             bool hitCheck = sampleCoord.z > sampleDepth && floatBitsToUint(sampleDepth) < 0x3F800000u;
@@ -210,11 +227,20 @@ vec4 reflection(GbufferData gbufferData, float depth, vec3 f0, vec3 f82, float f
                     sampleDepth -= float(sampleDepth > 1.0);
                     stepScale *= 0.5;
                 }
-
-                bool hitTerrain = abs(refinementCoord.z - sampleDepth - offset.x) < minimumThichness && floatBitsToUint(sampleDepth) < 0x3F800000u && dot(stepSize.st, refinementCoord.st - originCoord) > 0.0;
+                float stepDirection = sampleDepth - refinementCoord.z;
                 #ifdef LOD
-                    hitTerrain = hitTerrain || (abs(sampleDepth + 0.5) < 0.5 && abs(refinementCoord.w + sampleDepth - offset.y) < minimumThichnessLod);
+                    float stepDirectionLod = -sampleDepth - refinementCoord.w;
+                    stepDirection = mix(stepDirection, stepDirectionLod, float(sampleDepth < 0.0));
                 #endif
+                refinementCoord += 2.0 * stepScale * float(stepDirection > 0.0) * stepSize;
+                sampleDepth = uintBitsToFloat(textureLod(colortex6, refinementCoord.st, 0.0).x);
+                sampleDepth -= float(sampleDepth > 1.0);
+
+                bool hitTerrain = abs(refinementCoord.z - sampleDepth - minimumThichness) < minimumThichness && floatBitsToUint(sampleDepth) < 0x3F800000u;
+                #ifdef LOD
+                    hitTerrain = hitTerrain || (abs(sampleDepth + 0.5) < 0.5 && abs(refinementCoord.w + sampleDepth - minimumThichnessLod) < minimumThichnessLod);
+                #endif
+                hitTerrain = hitTerrain && dot(stepSize.st, refinementCoord.st - originCoord) > 0.0;
                 if (hitTerrain && all(lessThan(floatBitsToUint(refinementCoord.st), floatBitsToUint(screenEdge)))) {
                     sampleCoord = refinementCoord;
                     hitSky = false;
@@ -224,35 +250,58 @@ vec4 reflection(GbufferData gbufferData, float depth, vec3 f0, vec3 f82, float f
             if (any(greaterThan(floatBitsToUint(sampleCoord.st), floatBitsToUint(screenEdge))) || sampleCoord.z < 0.0) break;
             sampleCoord += stepSize;
         }
+        #ifdef SCREEN_SPACE_REFLECTION_EDGE_FADE
+            float fade = blueNoiseTemporal(texcoord).x;
+            vec2 screenEdgeDistance = min(sampleCoord.st, 1.0 - sampleCoord.st);
+            hitSky = hitSky || (min(screenEdgeDistance.x, screenEdgeDistance.y) * 6.0 < fade);
+        #endif
+        #ifdef ABZA_OFFSCREEN_REFLECTION
+            vec4 voxelReflection = vec4(0.0);
+            bool hitVoxel = false;
+            bool openSky = false;
+            if (mirrorResult >= 0) {
+                hitVoxel = mirrorResult == 1;
+                openSky = mirrorResult == 0;
+                voxelReflection = mirrorReflection;
+            }
+            else if (hitSky && gbufferData.materialID != MAT_HAND) {
+                hitVoxel = abzaOffscreenReflection(viewPos, gbufferData.geoNormal, rayDir, voxelReflection, openSky);
+            }
+        #endif
         rayDir = mat3(gbufferModelViewInverse) * rayDir;
         if (!hitSky) {
-            vec3 sampleViewPos;
+            vec3 sampleViewPos = sampleCoord.xyz * 2.0;
+            #ifdef TAA
+                sampleViewPos.st -= taaOffset;
+            #endif
+            #if SR_ENABLE
+                sampleViewPos.st *= upscaleRatio;
+            #endif
+            sampleViewPos -= 1.0;
             #ifdef LOD
                 if (sampleCoord.z >= 1.0) {
-                    vec3 sampleProjPos = sampleCoord.xyw * 2.0 - 1.0;
-                    #ifdef TAA
-                        sampleProjPos.st -= taaOffset;
-                    #endif
-                    sampleProjPos.xy *= vec2(projInvLod()[0].x, projInvLod()[1].y);
-                    sampleProjPos.xy += projInvLod()[3].xy;
-                    float projectionScale = projLod()[3].z / (sampleProjPos.z + projLod()[2].z);
-                    sampleViewPos = vec3(sampleProjPos.xy * projectionScale, -projectionScale);
+                    sampleViewPos.z = sampleCoord.w * 2.0 - 1.0;
+                    sampleViewPos.xy *= vec2(projInvLod()[0].x, projInvLod()[1].y);
+                    sampleViewPos.xy += projInvLod()[3].xy;
+                    float projectionScale = projLod()[3].z / (sampleViewPos.z + projLod()[2].z);
+                    sampleViewPos = vec3(sampleViewPos.xy * projectionScale, -projectionScale);
                 } else
             #endif
             {
-                vec3 sampleProjPos = sampleCoord.xyz * 2.0 - 1.0;
-                #ifdef TAA
-                    sampleProjPos.st -= taaOffset;
-                #endif
-                sampleProjPos.xy *= vec2(gbufferProjectionInverse[0].x, gbufferProjectionInverse[1].y);
-                sampleProjPos.xy += gbufferProjectionInverse[3].xy;
-                float projectionScale = gbufferProjection[3].z / (sampleProjPos.z + gbufferProjection[2].z);
-                sampleViewPos = vec3(sampleProjPos.xy * projectionScale, -projectionScale);
+                sampleViewPos.xy *= vec2(gbufferProjectionInverse[0].x, gbufferProjectionInverse[1].y);
+                sampleViewPos.xy += gbufferProjectionInverse[3].xy;
+                float projectionScale = gbufferProjection[3].z / (sampleViewPos.z + gbufferProjection[2].z);
+                sampleViewPos = vec3(sampleViewPos.xy * projectionScale, -projectionScale);
             }
             float rayLength = distance(viewPos, sampleViewPos);
             vec3 sampleLight = texelFetch(colortex3, ivec2(sampleCoord.xy * screenSize), 0).rgb;
             reflectionColor = vec4(sampleLight, rayLength);
         }
+        #ifdef ABZA_OFFSCREEN_REFLECTION
+            else if (hitVoxel) {
+                reflectionColor = voxelReflection;
+            }
+        #endif
         else {
             reflectionColor.rgb = vec3(0.0);
             #ifdef SHADOW_AND_SKY
@@ -283,21 +332,31 @@ vec4 reflection(GbufferData gbufferData, float depth, vec3 f0, vec3 f82, float f
                 #endif
                 reflectionColor.rgb = mix(reflectionColor.rgb, planeCloud.rgb, planeCloud.a);
                 #ifdef LIGHT_LEAKING_FIX
-                    float skyLightLevelFix = gbufferData.lightmap.y;
-                    vec2 screenDir = rayDir.xy * vec2(gbufferProjection[0].x, gbufferProjection[1].y) / -rayDir.z;
-                    if (all(lessThan(abs(screenDir), vec2(1.0)))) {
+                    vec3 viewRayDir = mat3(gbufferModelView) * rayDir;
+                    vec2 screenDir = viewRayDir.xy * vec2(gbufferProjection[0].x, gbufferProjection[1].y) / -viewRayDir.z;
+                    if (all(lessThan(abs(screenDir), vec2(1.0))) && viewRayDir.z < 0.0) {
                         vec2 targetCoord = screenDir * 0.5 + 0.5;
+                        #if SR_ENABLE
+                            targetCoord *= renderScale;
+                        #endif
                         float targetDepth = textureLod(depthtex1, targetCoord, 0.0).x;
                         #ifdef LOD
                             targetDepth = max(targetDepth, getLodDepthSolid(targetCoord));
                         #endif
-                        skyLightLevelFix = clamp(skyLightLevelFix + float(targetDepth == 1.0), 0.0, 1.0);
+                        gbufferData.lightmap.y = clamp(gbufferData.lightmap.y + float(targetDepth == 1.0), 0.0, 1.0);
                     }
-                    reflectionColor.rgb *= skyLightLevelFix;
+                    #ifdef ABZA_OFFSCREEN_REFLECTION
+                        gbufferData.lightmap.y = max(gbufferData.lightmap.y, float(openSky));
+                    #endif
+                    reflectionColor.rgb *= gbufferData.lightmap.y;
+                    indoorFill = abzaIndoorReflection(gbufferData, viewPos) * (1.0 - gbufferData.lightmap.y);
                 #endif
             #endif
             reflectionColor.w = 114514.0;
         }
+        #ifdef ABZA_OFFSCREEN_REFLECTION
+            hitSky = hitSky && !hitVoxel;
+        #endif
         if (isEyeInWater == 0) {
             #ifdef THE_END
                 reflectionColor.rgb = endFogTotal(reflectionColor.rgb, reflectionColor.w);
@@ -332,7 +391,7 @@ vec4 reflection(GbufferData gbufferData, float depth, vec3 f0, vec3 f82, float f
         else if (isEyeInWater == 3) {
             reflectionColor.rgb = snowFogTotal(reflectionColor.rgb, skyColorUp, reflectionColor.w, gbufferData.lightmap.y);
         }
-        reflectionColor.rgb = max(vec3(0.0), reflectionColor.rgb * brdfWeight);
+        reflectionColor.rgb = max(vec3(0.0), (reflectionColor.rgb + indoorFill) * brdfWeight);
         reflectionColor.w = min(2.0, reflectionColor.w * step(gbufferData.smoothness, 0.9975) / far);
     }
     return reflectionColor;

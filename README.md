@@ -12,6 +12,7 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 | Forge | 47 |
 | Oculus | 1.8.0, with Embeddium |
 | Distant Horizons | Optional, tested with 3.3.2 |
+| [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) | Optional, 0.6.5: mirrors in water and glass |
 
 ## Presets
 
@@ -24,7 +25,7 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 | ABZA | Standard with "ABZA modpack" on |
 | High | Standard with 2048-pixel shadows, sharper ground textures, depth of field and underwater caustics |
 | Ultra | Standard with 4096-pixel shadows, coloured shadows from glass, cloud shadows, underwater caustics, depth of field, reflections on every surface that isn't fully rough, and sharper ground textures |
-| Max | Ultra with ray-traced bounce light (4 rays per pixel) and no cave adaptation |
+| Max | Ultra with ray-traced bounce light (4 rays per pixel) |
 
 ## Gallery
 
@@ -38,6 +39,8 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 | The Moon, with Earth overhead | Cinder's Eye Lands |
 | ![Distant Horizons](https://raw.githubusercontent.com/RinkyDinkyNooble/abza-shader-pack/main/curseforge/images/distant-horizons.gif) | ![Aiming a TaCZ optic](https://raw.githubusercontent.com/RinkyDinkyNooble/abza-shader-pack/main/curseforge/images/optics.gif) |
 | Distant Horizons terrain at night | TaCZ optics |
+| ![Mobs and the player reflected in dark glass](https://raw.githubusercontent.com/RinkyDinkyNooble/abza-shader-pack/main/curseforge/images/reflection-entities.jpg) | ![A glass wall reflecting the player and the city behind them](https://raw.githubusercontent.com/RinkyDinkyNooble/abza-shader-pack/main/curseforge/images/reflection-distant-horizons.jpg) |
+| With Shaders Companion: you and the mobs beside you in glass | With Shaders Companion: the city behind you, far terrain included |
 
 ## What it adds to Sundial Lite
 
@@ -46,6 +49,7 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 - **Exposure modes** (Post processing > Exposure): Steady (the default) follows the time of day, the weather and the world, never where you look; Metered follows the brightness on screen; Off keeps one exposure per world. Dark worlds stay dark in every mode.
 - **Glowing ores,** vanilla and modded: only the ore-coloured pixels glow.
 - **Shading where blocks meet:** crease shading on top of screen-space ambient occlusion, and vanilla's block corner shading. Ambient occlusion and ray-traced bounce light each have a switch (Lighting > Ray tracing).
+- **Mirrors with Shaders Companion:** with the [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) mod installed, water and stained or tinted glass show yourself, the mobs and buildings behind you and Distant Horizons' far terrain, with the pack's own light and shadows. Without the mod, reflections show what is on screen. Indoors, reflections nothing can reach show the room's own light instead of black.
 - **Sunshine sheen:** a soft sunlit highlight on ground and grass, plants that glow when lit from behind, and darker shade.
 - **Speed:** clouds and light shafts are computed at half resolution and smoothed over frames, reflections reuse the clouds already on screen, and Umbra skips its shadow pass. Costly settings go much lower than in Sundial, with separate switches for entity, player and block-entity shadows.
 - **Mod fixes:** no ghost rings when aiming TaCZ optics, no mirror glare on held glass, and Distant Horizons blocks glow by their light level.

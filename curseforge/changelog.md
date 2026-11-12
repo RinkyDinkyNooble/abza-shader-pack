@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.23 (2026-11-11)
+
+- With the new [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) mod installed, water and stained or tinted glass work as mirrors: they show yourself, the mobs, chests and buildings behind you and Distant Horizons' far terrain, with the same light and shadows as the rest of the world. Other shiny surfaces reflect what isn't on screen too. Three options on the Reflection screen, all on by default: "Shaders Companion reflections", "Shaders Companion mirror view" and "Mirror view full lighting". Without the mod nothing changes.
+- Far water no longer shimmers or breaks into fine stripes ("Distant wave smoothing", Texture > Water, on by default).
+- Glass and other shiny surfaces in dark rooms no longer show an upside-down copy of the skyline that moves with your view.
+- Indoors, reflections that can't see the sky are no longer black: they show a dim reflection of the room's own light. "Indoor reflection brightness" (Reflection) sets it; 0 is the old black.
+- Sharper, steadier reflections of things close to you, from Sundial's own fixes since 1.2.0, and an optional "Reflection edge fade".
+- New option "World-space reflections" (Reflection), off in every preset: without the mod, shiny surfaces can reflect nearby blocks that aren't on screen, and yourself while Player shadow is on. It costs frame rate and about 110 MB of video memory.
+- The Max preset has cave adaptation like the other presets.
+
 ## 1.0.11 (2026-11-08)
 
 - Outside the ABZA modpack, water and glass reflect a sun the size of Minecraft's own; before, the reflection was four times as wide.

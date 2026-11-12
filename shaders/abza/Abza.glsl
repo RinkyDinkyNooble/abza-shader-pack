@@ -2,7 +2,7 @@
 //  ABZA Shader: settings and per-world configuration
 //
 
-#define ABZA_SHADER v1_0_11 // [v1_0_11]
+#define ABZA_SHADER v1_0_23 // [v1_0_23]
 
 // Shadow filtering
     #define SHADOW_EDGE_SOFTNESS 0.5 // [0.25 0.5 0.75 1.0 1.5 2.0]
@@ -28,6 +28,17 @@
     // #define ABZA_MODPACK
     #define STAR_TEXTURE_BRIGHTNESS 25.0 // [2.0 5.0 10.0 15.0 20.0 25.0 30.0 40.0 50.0 75.0 100.0 150.0 200.0 300.0]
     #define STARS_BY_DAY 8.0 // [1.0 2.0 4.0 8.0 16.0 32.0]
+
+// Water
+    #define WATER_WAVE_FILTER
+
+// Reflections
+    #define COMPANION_REFLECTIONS
+    #define COMPANION_MIRROR
+    #define COMPANION_MIRROR_LIGHTING
+    // #define WORLD_REFLECTIONS
+    #define WORLD_REFLECTION_DISTANCE 48 // [16 24 32 48 64]
+    #define INDOOR_REFLECTION 0.3 // [0.0 0.05 0.1 0.15 0.2 0.3 0.4 0.5 0.6 0.8 1.0]
 
 // Ambient occlusion (VBAO and crease shading)
     #define AMBIENT_OCCLUSION

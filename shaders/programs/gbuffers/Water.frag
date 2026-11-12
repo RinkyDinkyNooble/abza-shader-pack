@@ -33,6 +33,7 @@ flat in int materialID;
 #include "/libs/GbufferData.glsl"
 #include "/libs/Common.glsl"
 #include "/libs/Water.glsl"
+#include "/abza/WaterWaves.glsl"
 #include "/libs/PhysicsOcean.glsl"
 #include "/libs/Parallax.glsl"
 
@@ -140,10 +141,15 @@ void main() {
             vec4 normalData = vec4(0.5, 0.5, 1.0, 1.0);
         #endif
         #if WATER_TYPE == 0
+            float waveFootprint = abzaWaterFootprint(viewPos.xyz);
             if (rawData.materialID == MAT_WATER) {
                 rawData.albedo.rgb = color.rgb;
                 vec3 tangentDir = viewPos.xyz * tbnMatrix;
-                rawData.normal = waterWave(mcPos / 32.0, tangentDir);
+                #ifdef WATER_WAVE_FILTER
+                    rawData.normal = abzaWaterWave(mcPos / 32.0, tangentDir, waveFootprint);
+                #else
+                    rawData.normal = waterWave(mcPos / 32.0, tangentDir);
+                #endif
                 rawData.smoothness = 1.0;
                 rawData.metalness = 0.0;
                 rawData.porosity = 0.0;

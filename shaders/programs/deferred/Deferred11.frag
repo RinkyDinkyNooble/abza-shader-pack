@@ -18,8 +18,10 @@
 
 #extension GL_ARB_gpu_shader5 : enable
 
+#ifndef ABZA_MIRROR_LIGHT_PASS
 layout(location = 0) out vec4 texBuffer3;
 layout(location = 1) out uint texBuffer6;
+#endif
 
 in vec2 texcoord;
 
@@ -260,6 +262,7 @@ const float shadowDistance = 80.0; // [16.0 32.0 48.0 64.0 80.0 120.0 160.0 200.
     }
 #endif
 
+#ifndef ABZA_MIRROR_LIGHT_PASS
 void main() {
     ivec2 texel = ivec2(gl_FragCoord.st);
     GbufferData gbufferData = getGbufferData(texel, texcoord);
@@ -373,3 +376,4 @@ void main() {
 }
 
 /* DRAWBUFFERS:36 */
+#endif
