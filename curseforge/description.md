@@ -33,6 +33,14 @@ With the [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-compani
 <td align="center"><strong>Mobs And Players</strong><br>You and the mobs beside you in glass</td>
 <td align="center"><strong>Distant Horizons</strong><br>The city behind you, far terrain included</td>
 </tr>
+<tr>
+<td align="center"><a href="https://raw.githubusercontent.com/RinkyDinkyNooble/abza-shader-pack/main/curseforge/images/reflection-gun-armour.jpg" rel="nofollow"><img src="https://raw.githubusercontent.com/RinkyDinkyNooble/abza-shader-pack/main/curseforge/images/reflection-gun-armour.jpg" alt="The player's gun and armour reflected in black glass" width="400"></a></td>
+<td align="center"><a href="https://raw.githubusercontent.com/RinkyDinkyNooble/abza-shader-pack/main/curseforge/images/reflection-town.jpg" rel="nofollow"><img src="https://raw.githubusercontent.com/RinkyDinkyNooble/abza-shader-pack/main/curseforge/images/reflection-town.jpg" alt="A black glass wall reflecting the player, the town and a tower" width="400"></a></td>
+</tr>
+<tr>
+<td align="center"><strong>Gun And Armour</strong><br>What you hold and wear, in black glass</td>
+<td align="center"><strong>Many Features Combined</strong><br>You, the town and the sky in one glass wall</td>
+</tr>
 </table>
 
 ***
@@ -56,6 +64,14 @@ With the [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-compani
 ## Gallery
 
 <table>
+<tr>
+<td align="center"><a href="https://raw.githubusercontent.com/RinkyDinkyNooble/abza-shader-pack/main/curseforge/images/interior-furniture.jpg" rel="nofollow"><img src="https://raw.githubusercontent.com/RinkyDinkyNooble/abza-shader-pack/main/curseforge/images/interior-furniture.jpg" alt="A lit hallway with furniture and potted plants" width="400"></a></td>
+<td align="center"><a href="https://raw.githubusercontent.com/RinkyDinkyNooble/abza-shader-pack/main/curseforge/images/rain-night-house.jpg" rel="nofollow"><img src="https://raw.githubusercontent.com/RinkyDinkyNooble/abza-shader-pack/main/curseforge/images/rain-night-house.jpg" alt="A lit house in the rain at night" width="400"></a></td>
+</tr>
+<tr>
+<td align="center">A hallway with furniture and plants</td>
+<td align="center">A lit house in the rain at night</td>
+</tr>
 <tr>
 <td align="center"><a href="https://raw.githubusercontent.com/RinkyDinkyNooble/abza-shader-pack/main/curseforge/images/earth-dusk-ores.jpg" rel="nofollow"><img src="https://raw.githubusercontent.com/RinkyDinkyNooble/abza-shader-pack/main/curseforge/images/earth-dusk-ores.jpg" alt="Earth at dusk: glowing ores" width="400"></a></td>
 <td align="center"><a href="https://raw.githubusercontent.com/RinkyDinkyNooble/abza-shader-pack/main/curseforge/images/earth-night-sky.jpg" rel="nofollow"><img src="https://raw.githubusercontent.com/RinkyDinkyNooble/abza-shader-pack/main/curseforge/images/earth-night-sky.jpg" alt="Earth's night sky in the modpack" width="400"></a></td>
