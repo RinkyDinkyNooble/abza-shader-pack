@@ -92,11 +92,7 @@ void main() {
         if (materialID == MAT_WATER) {
             rawData.albedo = color;
             vec3 tangentDir = transpose(tbnMatrix) * viewPos.xyz;
-            #ifdef WATER_WAVE_FILTER
-                normal = abzaWaterWave(mcPos / 32.0, tangentDir, waveFootprint);
-            #else
-                normal = waterWave(mcPos / 32.0, tangentDir);
-            #endif
+            normal = abzaWaterSurfaceWave(mcPos / 32.0, tangentDir, waveFootprint);
             normal.xy += rippleNormal.xy * wetStrength;
             normal = normalize(tbnMatrix * normal);
         } else

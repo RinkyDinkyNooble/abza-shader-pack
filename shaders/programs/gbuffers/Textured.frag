@@ -41,6 +41,7 @@ noperspective in vec4 coordRange;
 #include "/libs/Common.glsl"
 #include "/libs/Parallax.glsl"
 #include "/abza/Entities.glsl"
+#include "/abza/RainCover.glsl"
 
 #ifdef ENTITY_VERTEX_TBN
     in mat3 vertexTbnMatrix;
@@ -314,7 +315,8 @@ void main() {
             if (rainyStrength > 0.0) {
                 float porosity = rawData.porosity * 255.0 / 64.0;
                 porosity *= step(porosity, 1.0);
-                float outdoor = clamp(15.0 * rawData.lightmap.y - 14.0, 0.0, 1.0);
+                float outdoor = abzaRainOutdoor(clamp(15.0 * rawData.lightmap.y - 14.0, 0.0, 1.0),
+                    viewToWorldPos(viewPos) + cameraPosition, mat3(gbufferModelViewInverse) * rawData.geoNormal);
 
                 float porosityDarkness = porosity * outdoor * rainyStrength;
                 rawData.albedo.rgb = pow(rawData.albedo.rgb, vec3(1.0 + porosityDarkness)) * (1.0 - 0.2 * porosityDarkness);

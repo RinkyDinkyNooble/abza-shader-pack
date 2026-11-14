@@ -12,7 +12,7 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 | Forge | 47 |
 | Oculus | 1.8.0, with Embeddium |
 | Distant Horizons | Optional, tested with 3.3.2 |
-| [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) | Optional, 0.6.5: mirrors in water and glass |
+| [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) | Optional, 0.9.1: mirrors in water and glass, dry ground under glass roofs |
 
 ## Presets
 
@@ -49,7 +49,7 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 - **Exposure modes** (Post processing > Exposure): Steady (the default) follows the time of day, the weather and the world, never where you look; Metered follows the brightness on screen; Off keeps one exposure per world. Dark worlds stay dark in every mode.
 - **Glowing ores,** vanilla and modded: only the ore-coloured pixels glow.
 - **Shading where blocks meet:** crease shading on top of screen-space ambient occlusion, and vanilla's block corner shading. Ambient occlusion and ray-traced bounce light each have a switch (Lighting > Ray tracing).
-- **Mirrors with Shaders Companion:** with the [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) mod installed, water and stained or tinted glass show yourself, the mobs and buildings behind you and Distant Horizons' far terrain, with the pack's own light and shadows. Without the mod, reflections show what is on screen. Indoors, reflections nothing can reach show the room's own light instead of black.
+- **Mirrors with Shaders Companion:** with the [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) mod installed, water and stained or tinted glass show yourself, the mobs and buildings behind you and Distant Horizons' far terrain, with the pack's own light and shadows. Water and glass seen in a mirror look like the water and glass around you, and in rain the ground under glass roofs stays dry. Without the mod, reflections show what is on screen. Indoors, reflections nothing can reach show the room's own light instead of black.
 - **Sunshine sheen:** a soft sunlit highlight on ground and grass, plants that glow when lit from behind, and darker shade.
 - **Speed:** clouds and light shafts are computed at half resolution and smoothed over frames, reflections reuse the clouds already on screen, and Umbra skips its shadow pass. Costly settings go much lower than in Sundial, with separate switches for entity, player and block-entity shadows.
 - **Mod fixes:** no ghost rings when aiming TaCZ optics, no mirror glare on held glass, and Distant Horizons blocks glow by their light level.

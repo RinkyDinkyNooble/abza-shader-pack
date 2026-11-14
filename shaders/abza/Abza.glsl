@@ -2,7 +2,7 @@
 //  ABZA Shader: settings and per-world configuration
 //
 
-#define ABZA_SHADER v1_0_23 // [v1_0_23]
+#define ABZA_SHADER v1_0_28 // [v1_0_28]
 
 // Shadow filtering
     #define SHADOW_EDGE_SOFTNESS 0.5 // [0.25 0.5 0.75 1.0 1.5 2.0]
@@ -32,10 +32,15 @@
 // Water
     #define WATER_WAVE_FILTER
 
+// Rain
+    #define COMPANION_RAIN_COVER
+
 // Reflections
     #define COMPANION_REFLECTIONS
     #define COMPANION_MIRROR
     #define COMPANION_MIRROR_LIGHTING
+    #define COMPANION_REFLECTED_WATER
+    #define COMPANION_MIRROR_DETAIL 48 // [0 16 32 48 64 96 128 192 256 512]
     // #define WORLD_REFLECTIONS
     #define WORLD_REFLECTION_DISTANCE 48 // [16 24 32 48 64]
     #define INDOOR_REFLECTION 0.3 // [0.0 0.05 0.1 0.15 0.2 0.3 0.4 0.5 0.6 0.8 1.0]

@@ -21,6 +21,7 @@
 layout(location = 0) out vec4 gbufferData0;
 layout(location = 1) out vec4 gbufferData1;
 layout(location = 2) out vec4 gbufferData2;
+layout(location = 3) out vec4 abzaWaterBehind;
 
 in vec4 color;
 in vec4 texlmcoord;
@@ -36,6 +37,9 @@ flat in int materialID;
 #include "/abza/WaterWaves.glsl"
 #include "/libs/PhysicsOcean.glsl"
 #include "/libs/Parallax.glsl"
+#define ABZA_WATER_BEHIND_WRITE
+#include "/abza/WaterBehind.glsl"
+#include "/abza/RainCover.glsl"
 
 #ifdef PHYSICS_OCEAN
     in vec3 physics_localPosition;
@@ -100,7 +104,7 @@ void main() {
     vec3 mcPos = viewToWorldPos(viewPos) + cameraPosition;
     vec3 worldGeoNormal = mat3(gbufferModelViewInverse) * rawData.geoNormal;
     if (rainyStrength > 0.0) {
-        float outdoor = clamp(15.0 * rawData.lightmap.y - 14.0, 0.0, 1.0);
+        float outdoor = abzaRainOutdoor(clamp(15.0 * rawData.lightmap.y - 14.0, 0.0, 1.0), mcPos, worldGeoNormal);
         if (rawData.materialID == MAT_WATER) {
             wetStrength = outdoor * clamp(abs(worldGeoNormal.y) * 10.0 - 0.1, 0.0, 1.0);
         }
@@ -145,11 +149,7 @@ void main() {
             if (rawData.materialID == MAT_WATER) {
                 rawData.albedo.rgb = color.rgb;
                 vec3 tangentDir = viewPos.xyz * tbnMatrix;
-                #ifdef WATER_WAVE_FILTER
-                    rawData.normal = abzaWaterWave(mcPos / 32.0, tangentDir, waveFootprint);
-                #else
-                    rawData.normal = waterWave(mcPos / 32.0, tangentDir);
-                #endif
+                rawData.normal = abzaWaterSurfaceWave(mcPos / 32.0, tangentDir, waveFootprint);
                 rawData.smoothness = 1.0;
                 rawData.metalness = 0.0;
                 rawData.porosity = 0.0;
@@ -195,6 +195,7 @@ void main() {
     #endif
 
     packUpGbufferDataSolid(rawData, gbufferData0, gbufferData1, gbufferData2);
+    abzaWaterBehind = abzaWaterBehindData(viewPos, rawData.lightmap.y, rawData.materialID == MAT_WATER);
 }
 
-/* DRAWBUFFERS:012 */
+/* RENDERTARGETS: 0,1,2,15 */

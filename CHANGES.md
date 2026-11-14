@@ -2,6 +2,15 @@
 
 ABZA Shader is based on Sundial Lite v1.2.0 by GeForceLegend (GPL-3.0). This file lists every change, newest first.
 
+## 1.0.28 (2026-11-14)
+
+- With [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) 0.9.1: water and glass seen in a mirror look like the water and glass around you. Reflected water has its colour over the depth below it, its waves and the sky; reflected stained glass tints what lies behind it. "Water and glass in reflections" (Reflection), on by default.
+- New "Mirror view detail distance" (Reflection; 48 blocks in Standard and ABZA, 16 in Potato, 64 in High, 128 in Ultra, 256 in Max): reflected surfaces farther away get simpler shadows and calm water, for frame rate.
+- With Shaders Companion, ground under glass roofs stays dry in rain: no puddles or ripples where the rain itself stops. "Dry under glass roofs" (Weather), on by default.
+- Water seen through glass is water again: the sea or a reef behind stained or tinted glass keeps its colour, waves and sky reflection.
+- With Distant Horizons, far coasts seen through glass no longer show pale patches and bars along the waterline.
+- With Shaders Companion, mirrors are ready as you turn to them, flat glass mirrors cost less, and mirrors cost less where they cover little of the screen.
+
 ## 1.0.23 (2026-11-11)
 
 - With the new [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) mod installed, water and stained or tinted glass work as mirrors: they show yourself, the mobs, chests and buildings behind you and Distant Horizons' far terrain, with the same light and shadows as the rest of the world. Other shiny surfaces reflect what isn't on screen too. Three options on the Reflection screen, all on by default: "Shaders Companion reflections", "Shaders Companion mirror view" and "Mirror view full lighting". Without the mod nothing changes.

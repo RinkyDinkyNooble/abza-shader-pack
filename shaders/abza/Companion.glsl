@@ -1,7 +1,7 @@
 //
 //  ABZA Shader: reflections from Shaders Companion, a companion mod that draws a low-resolution cube view of the
 //  terrain, entities and Distant Horizons LODs around the camera, and a mirror view, into textures (layout: the mod's
-//  API.md, cube protocol 2, mirror view protocol 1)
+//  API.md, cube protocol 2, mirror view protocol 2)
 //
 
 #ifndef ABZA_COMPANION_GLSL
@@ -10,17 +10,34 @@
 #ifdef COMPANION_REFLECTIONS
     #define ABZA_COMPANION
 #endif
+#ifdef COMPANION_REFLECTED_WATER
+    // Water in the mod's views shaded as water, glass as glass
+    #define ABZA_COMPANION_WATER
+#endif
 #ifdef COMPANION_MIRROR
     #define ABZA_MIRROR
-    #define ABZA_MIRROR_PROTOCOL 1
+    #define ABZA_MIRROR_PROTOCOL 2
     #ifdef COMPANION_MIRROR_LIGHTING
         // The mirror view lit by deferred14 (abza/MirrorLightPass.frag) into colortex14
         #define ABZA_MIRROR_LIGHTING
+        #ifdef COMPANION_REFLECTED_WATER
+            // deferred14 reads the mod's copy of the surfaces behind the mirror view's water and glass
+            #define ABZA_MIRROR_BEHIND
+        #endif
     #endif
 #endif
 
 #if defined ABZA_COMPANION || defined ABZA_MIRROR
     #include "/abza/SurfaceLight.glsl"
+    #ifdef ABZA_COMPANION_WATER
+        #include "/abza/WaterSurface.glsl"
+    #endif
+
+    // Whether a texel's id field (see abzaCompanionShadeTexel) is water: a water block, a water cauldron's water or
+    // Distant Horizons' water
+    bool abzaCompanionIsWater(uint id) {
+        return id == 8193u || id == 8195u || id == (0xC000u | 12u);
+    }
 
     vec3 abzaCompanionOctDecode(vec2 e) {
         e = e * 2.0 - 1.0;
@@ -116,10 +133,17 @@
         vec3 normal = abzaCompanionOctDecode(vec2(float(data.r >> 8u), float(data.r & 255u)) / 255.0);
         // Surfaces drawn on both sides (plants, panes) face the ray, as Terrain.frag turns them to the camera
         normal = dot(normal, rayDir) > 0.0 ? -normal : normal;
-        // Plants and leaves let sunlight through
-        float translucent = data.b < 0x8000u ? float(abzaCompanionPorosity(abzaCompanionMaterial(int(data.b) - 1, normal)) > 64.5 / 255.0) : 0.0;
         float blockLevel = float(data.g >> 8u) / 255.0;
         float skyLevel = float(data.g & 255u) / 255.0;
+        #ifdef ABZA_COMPANION_WATER
+            if (abzaCompanionIsWater(data.b)) {
+                // Deep water, as nothing under it is in this layer: its colour and the sky it reflects
+                vec3 deepWater = waterFogTotal(vec3(0.0), rayDir, skyColorUp, 64.0, skyLevel);
+                return abzaSkyReflection(deepWater, surfacePos, rayDir, normal, 0.02, skyLevel, skyColorUp);
+            }
+        #endif
+        // Plants and leaves let sunlight through
+        float translucent = data.b < 0x8000u ? float(abzaCompanionPorosity(abzaCompanionMaterial(int(data.b) - 1, normal)) > 64.5 / 255.0) : 0.0;
         float emissive;
         if (data.b >= 0xC000u) {
             // Distant Horizons materials: lava (6) and light sources (15)

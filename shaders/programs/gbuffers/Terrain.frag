@@ -36,6 +36,7 @@ flat in int material;
 #include "/libs/Water.glsl"
 #include "/libs/Parallax.glsl"
 #include "/abza/Ores.glsl"
+#include "/abza/RainCover.glsl"
 
 void main() {
     GbufferData rawData;
@@ -178,7 +179,7 @@ void main() {
     if (rainyStrength > 0.0 && material != 8195 && rawData.materialID != MAT_GRASS) {
         float porosity = rawData.porosity * 255.0 / 64.0;
         porosity *= step(porosity, 1.0);
-        float outdoor = clamp(15.0 * rawData.lightmap.y - 14.0, 0.0, 1.0);
+        float outdoor = abzaRainOutdoor(clamp(15.0 * rawData.lightmap.y - 14.0, 0.0, 1.0), worldPos, mat3(gbufferModelViewInverse) * tbnMatrix[2]);
 
         float porosityDarkness = porosity * outdoor * rainyStrength;
         rawData.albedo.rgb = pow(rawData.albedo.rgb, vec3(1.0 + porosityDarkness)) * (1.0 - 0.2 * porosityDarkness);

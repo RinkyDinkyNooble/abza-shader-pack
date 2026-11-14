@@ -15,7 +15,7 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 <tr><td><strong>Forge</strong></td><td>47</td></tr>
 <tr><td><strong>Oculus</strong></td><td>1.8.0, with Embeddium</td></tr>
 <tr><td><strong>Distant Horizons</strong></td><td><span style="color:#3598db"><strong>Optional</strong></span>, tested with 3.3.2</td></tr>
-<tr><td><strong><a href="https://github.com/RinkyDinkyNooble/shaders-companion">Shaders Companion</a></strong></td><td><span style="color:#3598db"><strong>Optional</strong></span>, 0.6.5: mirrors in water and glass</td></tr>
+<tr><td><strong><a href="https://github.com/RinkyDinkyNooble/shaders-companion">Shaders Companion</a></strong></td><td><span style="color:#3598db"><strong>Optional</strong></span>, 0.9.1: mirrors in water and glass, dry ground under glass roofs</td></tr>
 </table>
 
 ***
@@ -23,6 +23,10 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 ## Mirrors With Shaders Companion
 
 With the [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) mod installed, water and stained or tinted glass work as <span style="color:#2dc26b"><strong>mirrors</strong></span>: they show yourself, the mobs, chests and buildings behind you and Distant Horizons' far terrain, with the same light and shadows as the rest of the world. Without the mod nothing changes: reflections show what is on screen.
+
+*   **Water and glass in reflections:** reflected water has its colour, waves and sky, and reflected stained glass tints what lies behind it.
+*   **Dry under glass roofs:** in rain, the ground under glass and other see-through roofs stays dry, where the rain itself stops.
+*   **Detail by distance:** "Mirror view detail distance" (Reflection) keeps full detail for near reflections and simpler shadows for far ones; each preset sets it.
 
 <table>
 <tr>

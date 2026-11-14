@@ -1,6 +1,6 @@
 //
 //  ABZA Shader: reflections from Shaders Companion's mirror view, the world mirrored in the largest reflecting surface
-//  on screen (a water level or a glass wall) at screen resolution (layout: the mod's API.md, mirror view protocol 1)
+//  on screen (a water level or a glass wall) at screen resolution (layout: the mod's API.md, mirror view protocol 2)
 //
 
 #include "/abza/Companion.glsl"
@@ -60,12 +60,24 @@
         return mix(litColor, screenColor, onScreen);
     }
 
+    // The hit of a ray from start (on the mirror's plane, relative to the camera) on the mirror view's surface at coord,
+    // at distance surface from the mirrored camera: the point of the ray at that distance
+    vec4 abzaMirrorHit(vec2 coord, vec3 start, vec3 worldDir, vec3 origin, float surface) {
+        vec3 fromOrigin = start - origin;
+        float along = dot(fromOrigin, worldDir);
+        float t = sqrt(max(along * along - dot(fromOrigin, fromOrigin) + surface * surface, 0.0)) - along;
+        vec3 surfacePos = start + worldDir * t;
+        return vec4(abzaMirrorShade(coord, surfacePos, worldDir), t);
+    }
+
     // For a reflection ray from a point relative to the camera: when the point lies on the mirror view's plane, traces
-    // the ray through the mirror view's distance map. A sample is behind a surface when it is farther from the mirrored
-    // camera than the surface in its direction; a crossing within the step's length is refined by halving and is a hit
-    // when the refined point lies on the surface. Past the march, far surfaces are read in the ray's direction. Returns
-    // 1 on a hit (colour and distance travelled in color), 0 when nothing is in the ray's way (open sky), -1 when the
-    // mirror view doesn't apply (no mirror this frame, a point off its plane, or a ray that leaves the view).
+    // the ray through the mirror view's distance map. A ray that stays within one texel of the view (on a flat mirror
+    // it runs along the mirrored camera's own ray) is answered by that texel. Otherwise a sample is behind a surface
+    // when it is farther from the mirrored camera than the surface in its direction; a crossing within the step's
+    // length is refined by halving and is a hit when the refined point lies on the surface. Past the march, far
+    // surfaces are read in the ray's direction. Returns 1 on a hit (colour and distance travelled in color), 0 when
+    // nothing is in the ray's way (open sky), -1 when the mirror view doesn't apply (no mirror this frame, a point off
+    // its plane, or a ray that leaves the view).
     int abzaMirrorReflection(vec3 worldPos, vec3 worldGeoNormal, vec3 worldDir, out vec4 color) {
         color = vec4(0.0);
         vec4 header = texelFetch(scMirrorInfo, ivec2(0, 0), 0);
@@ -83,16 +95,36 @@
             texelFetch(scMirrorInfo, ivec2(5, 0), 0), texelFetch(scMirrorInfo, ivec2(6, 0), 0)
         );
         vec3 start = worldPos - plane.xyz * height;
+        vec2 coord;
+        float fromOrigin;
+        vec2 farCoord;
+        float farFromOrigin;
+        if (abzaMirrorProject(start, toClip, origin, coord, fromOrigin) &&
+            abzaMirrorProject(start + worldDir * 65536.0, toClip, origin, farCoord, farFromOrigin) &&
+            dot(abs(farCoord - coord) * header.zw, vec2(1.0)) < 1.0) {
+            coord = (coord + farCoord) * 0.5;
+            float surface = textureLod(scMirrorDistance, coord, 0.0).r;
+            if (surface < -0.5) {
+                return -1;
+            }
+            if (surface <= 0.0) {
+                return 0;
+            }
+            color = abzaMirrorHit(coord, start, worldDir, origin, surface);
+            return 1;
+        }
         float stepLength = 0.1;
         float t = 0.02;
         float previousT = 0.0;
-        vec2 coord;
-        float fromOrigin;
         for (int i = 0; i < ABZA_MIRROR_STEPS; i++) {
             if (!abzaMirrorProject(start + worldDir * t, toClip, origin, coord, fromOrigin)) {
                 return -1;
             }
             float surface = textureLod(scMirrorDistance, coord, 0.0).r;
+            // -1: a part of the view the mod didn't draw (it draws only where the mirror is on screen)
+            if (surface < -0.5) {
+                return -1;
+            }
             float behind = fromOrigin - surface;
             if (surface > 0.0 && behind > 0.0 && behind < stepLength * 1.5 + 0.02 * surface) {
                 float frontT = previousT;
@@ -129,6 +161,9 @@
             return -1;
         }
         float surface = textureLod(scMirrorDistance, coord, 0.0).r;
+        if (surface < -0.5) {
+            return -1;
+        }
         if (surface <= 0.0) {
             return 0;
         }

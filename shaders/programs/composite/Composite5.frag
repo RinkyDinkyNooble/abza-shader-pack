@@ -43,6 +43,7 @@ in vec2 texcoord;
 #include "/libs/Cloud.glsl"
 #include "/libs/GbufferData.glsl"
 #include "/libs/Shadow.glsl"
+#include "/abza/WaterBehind.glsl"
 
 #ifdef ABZA_PLANET_FOG
     #include "/abza/Fog.glsl"
@@ -187,6 +188,7 @@ void main() {
             solidColor.rgb = snowFogTotal(solidColor.rgb, skyColorUp, waterDistance, gbufferData.lightmap.y);
         }
         else {
+            solidColor.rgb = abzaWaterBehindFog(solidColor.rgb, texel, texcoord, worldDir, skyColorUp, waterViewDepthNoLimit, waterDistance);
             #ifdef NETHER
                 solidColor.rgb = netherFogTotal(solidColor.rgb, waterDistance);
             #elif defined THE_END

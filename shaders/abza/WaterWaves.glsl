@@ -64,6 +64,16 @@
         return normalize(vec3(sampleNormal * stepScale.xy, 1.0));
     }
 
+    // The water's wave normal at a point: filtered for a pixel covering footprint blocks of water with the wave filter
+    // on (abzaWaterWave), else waterWave (libs/Water.glsl)
+    vec3 abzaWaterSurfaceWave(vec3 position, vec3 tangentDir, float footprint) {
+        #ifdef WATER_WAVE_FILTER
+            return abzaWaterWave(position, tangentDir, footprint);
+        #else
+            return waterWave(position, tangentDir);
+        #endif
+    }
+
     // The size of the water a pixel covers, in blocks, from the change in its view position to the next pixels
     float abzaWaterFootprint(vec3 viewPos) {
         return max(length(dFdx(viewPos)), length(dFdy(viewPos)));
