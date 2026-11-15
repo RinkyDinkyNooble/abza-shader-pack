@@ -2,6 +2,10 @@
 
 ABZA Shader is based on Sundial Lite v1.2.0 by GeForceLegend (GPL-3.0). This file lists every change, newest first.
 
+## 1.0.29 (2026-11-14)
+
+- Lit buildings no longer glare at night with Steady exposure. Nights, storms and caves get less of the exposure lift, so lamps and glowing blocks look closer to how they do by day, and the picture no longer keeps brightening through the second half of the night. New "Night lift" (Exposure), 0.55 by default; 1 is the old look. If you lowered "Average exposure strength" to tame nights, set it back to 0.60.
+
 ## 1.0.28 (2026-11-14)
 
 - With [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) 0.9.1: water and glass seen in a mirror look like the water and glass around you. Reflected water has its colour over the depth below it, its waves and the sky; reflected stained glass tints what lies behind it. "Water and glass in reflections" (Reflection), on by default.

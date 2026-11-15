@@ -29,7 +29,7 @@ out vec2 texcoord;
 
 #ifdef SKY_COLOR_UP
     out vec3 skyColorUp;
-    #if EXPOSURE_MODE == 2
+    #if EXPOSURE_MODE == 1 || EXPOSURE_MODE == 2
         out vec3 abzaSkyColorNoon;
     #endif
 
@@ -106,7 +106,7 @@ void main() {
         #else
             skyColorUp = vec3(0.0);
         #endif
-        #if EXPOSURE_MODE == 2
+        #if EXPOSURE_MODE == 1 || EXPOSURE_MODE == 2
             #if ABZA_AIR == 1
                 abzaSkyColorNoon = atmosphereScatteringUp(1.0, 30.0);
             #else

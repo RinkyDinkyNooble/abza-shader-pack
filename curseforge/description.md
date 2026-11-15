@@ -116,7 +116,7 @@ With the [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-compani
 
 *   **Ad Astra's sky:** the sun, moon and planets Ad Astra draws are the visible ones, and the shader's light, shadows and light shafts come from that same sun. Water reflects the sun's square shape. Ad Astra's coloured stars keep their colours, and on airless worlds they stay visible by day.
 *   **Planet fog** in each biome's own fog colour, from the ground to the horizon, Distant Horizons terrain included.
-*   **Exposure modes** (Post processing > Exposure): Steady (the default) follows the time of day, the weather and the world, never where you look; Metered follows the brightness on screen; Off keeps one exposure per world. Dark worlds stay dark in every mode.
+*   **Exposure modes** (Post processing > Exposure): Steady (the default) follows the time of day, the weather and the world, never where you look, and "Night lift" sets how much it brightens nights and caves; Metered follows the brightness on screen; Off keeps one exposure per world. Dark worlds stay dark in every mode.
 *   **Glowing ores,** vanilla and modded: only the ore-coloured pixels glow.
 *   **Shading where blocks meet:** crease shading on top of screen-space ambient occlusion, and vanilla's block corner shading. Ambient occlusion and ray-traced bounce light each have a switch (Lighting > Ray tracing).
 *   **Sunshine sheen:** a soft sunlit highlight on ground and grass, plants that glow when lit from behind, and darker shade.

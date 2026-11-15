@@ -541,6 +541,8 @@ option.EXPOSURE_MODE.comment=Steady sets exposure from the light where you stand
 value.EXPOSURE_MODE.0=Metered
 option.STEADY_LOCAL_ADAPTATION=Cave adaptation
 option.STEADY_LOCAL_ADAPTATION.comment=Steady mode only. How much exposure adapts to the light where you stand, such as a cave or a torch-lit room. 0 turns it off, so exposure follows only the time of day, the weather and the world; 1 adapts fully, which brightens caves a lot and makes daylight seen from inside glaring
+option.STEADY_NIGHT_LIFT=Night lift
+option.STEADY_NIGHT_LIFT.comment=Steady mode only. How much exposure brightens scenes darker than sunset: nights, storms and dark places such as caves. 1 brightens them fully, so lit buildings glare at night; lower keeps nights darker and lit places closer to how they look by day
 value.EXPOSURE_MODE.1=Steady
 value.EXPOSURE_MODE.2=Off
 option.EXPOSURE_VALUE=EV
@@ -662,7 +664,7 @@ option.SHADOW_DISTORTION_FIX.comment=Fixes some shadows on very large faces. Slo
 
 option.ABZA_SHADER=ABZA Shader
 option.ABZA_SHADER.comment=Sundial Lite by GeForceLegend, adapted for the ABZA modpack. GPL-3.0.
-value.ABZA_SHADER.v1_0_28=1.0.28
+value.ABZA_SHADER.v1_0_29=1.0.29
 option.entityShadowDistanceMul=Entity shadow distance
 option.entityShadowDistanceMul.comment=How far entities cast shadows, as a share of the shadow distance (0.5 at 80 blocks is 40 blocks). Lower is faster in crowds
 option.SHADOW_ENTITIES=Entity shadows

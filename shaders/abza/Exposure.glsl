@@ -6,9 +6,7 @@
     #define ABZA_STEADY_EXPOSURE
 
     in vec3 skyColorUp;
-    #if EXPOSURE_MODE == 2
-        in vec3 abzaSkyColorNoon;
-    #endif
+    in vec3 abzaSkyColorNoon;
 
     // Linear colour of a fixed outdoor scene: grey ground (linear albedo 0.2; 60 % flat and 40 % walls; 70 % in direct light) and 35 % open sky,
     // lit like Sundial's deferred lighting by direct light `sun` at height lightHeight (0 to 1), the sky colour `sky` and the weather.
@@ -25,20 +23,27 @@
         return (1.0 - skyShare) * albedo * (direct + ambient) + skyShare * 1.5 * sky;
     }
 
+    // Brightness of the outdoor scene in clear weather with the world's daylight straight overhead
+    float abzaNoonBrightness() {
+        #if ABZA_AIR == 1
+            const vec3 noonLight = vec3(0.904, 0.830, 0.743);
+        #else
+            const vec3 noonLight = vec3(1.0);
+        #endif
+        vec3 noonScene = abzaOutdoorScene(noonLight * ABZA_DAY_LIGHT, abzaSkyColorNoon, 1.0, 0.0);
+        return max(3.0 * dot(noonScene, vec3(1.0 / 3.0)), 1e-6);
+    }
+
     // Scene brightness in the units of the metered brightness (3 times the mean linear colour on screen), without reading the screen.
     // Steady: the outdoor scene now; locally it is scaled by the sky light at the player, plus a share of the block light there.
     //   STEADY_LOCAL_ADAPTATION blends the two in log space: 0 uses the outdoor scene only, 1 the local one.
-    // Off: the outdoor scene in clear weather with the world's daylight straight overhead, so it never changes.
+    //   Below an eighth of the noon brightness (about the light at sunset; worlds with a fixed time: of their outdoor scene),
+    //   the result falls in log space at STEADY_NIGHT_LIFT times the rate, so darker scenes get that share of the exposure lift.
+    // Off: the noon brightness, so it never changes.
     //   Worlds with a fixed time use their outdoor scene now, which doesn't change either.
     float abzaSteadyBrightness() {
         #if EXPOSURE_MODE == 2 && ABZA_FIXED_TIME == 0
-            #if ABZA_AIR == 1
-                const vec3 noonLight = vec3(0.904, 0.830, 0.743);
-            #else
-                const vec3 noonLight = vec3(1.0);
-            #endif
-            vec3 noonScene = abzaOutdoorScene(noonLight * ABZA_DAY_LIGHT, abzaSkyColorNoon, 1.0, 0.0);
-            return max(3.0 * dot(noonScene, vec3(1.0 / 3.0)), 1e-6);
+            return abzaNoonBrightness();
         #else
             const float albedo = 0.2;
             const float diffuse = 1.0 + 1.0 / PI;
@@ -57,7 +62,14 @@
                 return outdoorScene;
             #else
                 float localScene = max(3.0 * dot(outdoor * skyLight + indoor + basic, vec3(1.0 / 3.0)), 1e-6);
-                return exp2(mix(log2(outdoorScene), log2(localScene), STEADY_LOCAL_ADAPTATION));
+                float brightness = exp2(mix(log2(outdoorScene), log2(localScene), STEADY_LOCAL_ADAPTATION));
+                #if ABZA_FIXED_TIME == 0
+                    float reference = 0.125 * abzaNoonBrightness();
+                #else
+                    float reference = 0.125 * outdoorScene;
+                #endif
+                float ratio = brightness / reference;
+                return reference * (ratio < 1.0 ? pow(ratio, STEADY_NIGHT_LIFT) : ratio);
             #endif
         #endif
     }
