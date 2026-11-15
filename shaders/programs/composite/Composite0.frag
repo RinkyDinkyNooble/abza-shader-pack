@@ -127,7 +127,10 @@ vec3 directionDistribution(vec2 noise, vec3 normal, vec3 viewDir, float roughnes
     return direction;
 }
 
-vec4 reflection(GbufferData gbufferData, float depth, vec3 f0, vec3 f82, float firstWeight) {
+// useMirror: whether Shaders Companion's mirror view may answer; mirrored says whether it did (the pixel lies on the
+// mirror's plane), so main() can fade a newly mirrored plane in from the reflection without it
+vec4 reflection(GbufferData gbufferData, float depth, vec3 f0, vec3 f82, float firstWeight, bool useMirror, out bool mirrored) {
+    mirrored = false;
     vec3 viewPos;
     #ifdef LOD
         if (depth > 1.0) {
@@ -199,8 +202,9 @@ vec4 reflection(GbufferData gbufferData, float depth, vec3 f0, vec3 f82, float f
         #ifdef ABZA_OFFSCREEN_REFLECTION
             vec4 mirrorReflection;
             int mirrorResult = -1;
-            if (gbufferData.materialID != MAT_HAND) {
+            if (useMirror && gbufferData.materialID != MAT_HAND) {
                 mirrorResult = abzaMirrorFirst(viewPos, gbufferData.geoNormal, rayDir, mirrorReflection);
+                mirrored = mirrorResult >= 0;
             }
             int reflectionSteps = mirrorResult < 0 ? SCREEN_SPACE_REFLECTION_STEP : 0;
         #else
@@ -446,7 +450,17 @@ void main() {
 
             if (reflectionStrength > 1e-5) {
                 f0 = signI(f0) * mix(abs(f0), gbufferData.albedo.rgb, gbufferData.metalness);
-                reflectionColor = reflection(gbufferData, waterDepth, f0, f82, reflectionStrength);
+                bool mirrored;
+                reflectionColor = reflection(gbufferData, waterDepth, f0, f82, reflectionStrength, true, mirrored);
+                #ifdef ABZA_MIRROR
+                    // A plane the mirror view has just taken over fades in from the reflection without it, so a
+                    // surface doesn't jump from one to the other in a frame
+                    float mirrorFade = abzaMirrorFadeIn();
+                    if (mirrored && mirrorFade < 0.999) {
+                        bool unused;
+                        reflectionColor = mix(reflection(gbufferData, waterDepth, f0, f82, reflectionStrength, false, unused), reflectionColor, mirrorFade);
+                    }
+                #endif
             }
         }
     #endif

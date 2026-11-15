@@ -2,6 +2,13 @@
 
 ABZA Shader is based on Sundial Lite v1.2.0 by GeForceLegend (GPL-3.0). This file lists every change, newest first.
 
+## 1.0.30 Hotfix (2026-11-15)
+
+- With [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) 0.9.3: reflections on far water and large glass walls no longer flicker. A surface the mirror view newly takes over fades in instead of popping.
+- Glass and other shiny surfaces indoors no longer show bright, flickering patches of daylight in their reflections.
+- "Mirror view detail distance" fades between full and simpler detail instead of showing a line that moves with you.
+- The Standard preset (the default) now uses Metered exposure, Sundial's own; the ABZA preset keeps Steady exposure with Night lift. To keep Steady outside the modpack, pick it under Post processing > Exposure.
+
 ## 1.0.29 (2026-11-14)
 
 - Lit buildings no longer glare at night with Steady exposure. Nights, storms and caves get less of the exposure lift, so lamps and glowing blocks look closer to how they do by day, and the picture no longer keeps brightening through the second half of the night. New "Night lift" (Exposure), 0.55 by default; 1 is the old look. If you lowered "Average exposure strength" to tame nights, set it back to 0.60.

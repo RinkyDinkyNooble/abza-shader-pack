@@ -2,7 +2,7 @@
 //  ABZA Shader: settings and per-world configuration
 //
 
-#define ABZA_SHADER v1_0_29 // [v1_0_29]
+#define ABZA_SHADER v1_0_30 // [v1_0_30]
 
 // Shadow filtering
     #define SHADOW_EDGE_SOFTNESS 0.5 // [0.25 0.5 0.75 1.0 1.5 2.0]
@@ -66,7 +66,7 @@
     #define PLANET_FOG_HEIGHT 1.0 // [0.5 0.75 1.0 1.5 2.0 3.0 4.0]
 
 // Exposure
-    #define EXPOSURE_MODE 1 // [0 1 2]
+    #define EXPOSURE_MODE 0 // [0 1 2]
     #define STEADY_LOCAL_ADAPTATION 0.5 // [0.0 0.05 0.1 0.15 0.2 0.3 0.4 0.5 0.75 1.0]
     #define STEADY_NIGHT_LIFT 0.55 // [0.25 0.4 0.55 0.7 0.85 1.0]
     #define EXPOSURE_DARK_LIMIT 1.0 // [0.0 0.25 0.5 1.0 2.0 4.0 8.0]

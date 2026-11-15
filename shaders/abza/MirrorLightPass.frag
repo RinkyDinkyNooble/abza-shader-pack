@@ -239,6 +239,21 @@ layout(location = 0) out vec4 texBuffer14;
     #endif
 #endif
 
+#ifdef ABZA_MIRROR_LIGHTING
+    // A mirror view texel lit with full detail or the simpler look
+    vec3 abzaMirrorTexelColor(
+        vec4 albedo, vec4 rawData, vec3 worldPos, vec3 rayDir, ivec2 texel, AbzaMirrorView view, float surface, bool detailed
+    ) {
+        #ifdef ABZA_MIRROR_BEHIND
+            // Water and glass: alpha below 1 (the mod writes 1 on opaque surfaces)
+            if (albedo.a < 0.999) {
+                return abzaMirrorTranslucent(albedo, rawData, worldPos, rayDir, texel, view, surface, detailed);
+            }
+        #endif
+        return abzaMirrorLightSurface(albedo.rgb, rawData, worldPos, rayDir, texel, view, surface, detailed);
+    }
+#endif
+
 void main() {
     texBuffer14 = vec4(0.0);
     #ifdef ABZA_MIRROR_LIGHTING
@@ -261,15 +276,18 @@ void main() {
         vec4 rawData = texelFetch(scMirrorData, mirrorTexel, 0);
         vec3 worldPos = abzaMirrorTexelPos(mirrorTexel, view, surface);
         vec3 rayDir = normalize(worldPos - view.origin - view.eye);
-        bool detailed = surface < float(COMPANION_MIRROR_DETAIL);
-        #ifdef ABZA_MIRROR_BEHIND
-            // Water and glass: alpha below 1 (the mod writes 1 on opaque surfaces)
-            if (albedo.a < 0.999) {
-                texBuffer14 = vec4(abzaMirrorTranslucent(albedo, rawData, worldPos, rayDir, mirrorTexel, view, surface, detailed), 1.0);
-                return;
-            }
+        // Full detail out to COMPANION_MIRROR_DETAIL blocks along the reflection and the simpler look past it, blended
+        // over the last eighth of that distance so the change doesn't show as a line that moves with the camera
+        #if COMPANION_MIRROR_DETAIL > 0
+            float detail = 1.0 - smoothstep(float(COMPANION_MIRROR_DETAIL) * 0.875, float(COMPANION_MIRROR_DETAIL), surface);
+        #else
+            const float detail = 0.0;
         #endif
-        texBuffer14 = vec4(abzaMirrorLightSurface(albedo.rgb, rawData, worldPos, rayDir, mirrorTexel, view, surface, detailed), 1.0);
+        vec3 color = abzaMirrorTexelColor(albedo, rawData, worldPos, rayDir, mirrorTexel, view, surface, detail > 0.5);
+        if (detail > 0.001 && detail < 0.999) {
+            color = mix(color, abzaMirrorTexelColor(albedo, rawData, worldPos, rayDir, mirrorTexel, view, surface, detail <= 0.5), abs(detail - float(detail > 0.5)));
+        }
+        texBuffer14 = vec4(color, 1.0);
     #endif
 }
 

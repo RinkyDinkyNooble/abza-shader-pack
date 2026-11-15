@@ -18,6 +18,15 @@
     #define ABZA_MIRROR_STEPS 32
     #define ABZA_MIRROR_REFINEMENTS 6
 
+    // How far a newly mirrored plane has faded in, 0 to 1 (info texel 8, from Shaders Companion 2.0.0; 1 with an older
+    // mod, whose info texture is 8 texels wide)
+    float abzaMirrorFadeIn() {
+        if (textureSize(scMirrorInfo, 0).x < 9) {
+            return 1.0;
+        }
+        return clamp(texelFetch(scMirrorInfo, ivec2(8, 0), 0).x, 0.0, 1.0);
+    }
+
     // Where a point relative to the camera lies in the mirror view (texture coordinate) and its distance from the
     // mirrored camera; false outside the view
     bool abzaMirrorProject(vec3 p, mat4 toClip, vec3 origin, out vec2 coord, out float fromOrigin) {

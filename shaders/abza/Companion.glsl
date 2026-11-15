@@ -237,8 +237,8 @@
     // when it is farther from the face's origin than the surface in its direction; a crossing within the step's length
     // is refined by halving and is a hit when the refined point lies on the surface, clear of the reflecting surface's
     // plane (planeNormal through worldPos). Past the march, far surfaces (distant terrain, Distant Horizons LODs) are
-    // read in the ray's direction. Returns 1 on a hit (colour and distance travelled in color), 0 when nothing is in
-    // the ray's way within the cube, -1 where part of the cube hasn't been drawn yet.
+    // read in the ray's direction. Returns 1 on a hit (colour and distance travelled in color), 0 when the cube sees
+    // open sky in the ray's way, -1 where part of the cube hasn't been drawn yet or the ray's way is unknown.
     int abzaCompanionReflection(vec3 worldPos, vec3 worldDir, vec3 planeNormal, out vec4 color) {
         color = vec4(0.0);
         float faceSize = texelFetch(scInfo, ivec2(0, 0), 0).z;
@@ -303,7 +303,10 @@
                 return 1;
             }
         }
-        return 0;
+        // Open sky only where the cube sees sky in the ray's direction. A surface there that the march passed without
+        // a hit (a wall or ceiling crossed at a grazing angle, between two steps) means the ray's way is unknown: as
+        // open sky it lit reflections indoors with full daylight, in patches that changed from frame to frame.
+        return surface > 0.0 ? -1 : 0;
     }
 #endif
 
