@@ -132,7 +132,7 @@ void main() {
             vec3 viewDir = viewPos * worldDistanceInv;
             vec3 refractDirection = normalize(
                 viewDir - (LdotH + k) * gbufferData.normal +
-                (dot(-gbufferData.geoNormal, viewDir) + k) * gbufferData.geoNormal * float(isTargetWater) // Get this idea from zombye/spectrum, MIT Licence
+                (dot(-gbufferData.geoNormal, viewDir) + k) * gbufferData.geoNormal * float(isTargetWater || ABZA_THIN_GLASS) // Get this idea from zombye/spectrum, MIT Licence
             );
             vec2 refractionOffset = (refractDirection.xy - viewPos.xy / viewPos.z * refractDirection.z + roughness * randomOffset) * refractionStrength * screenEdge;
             refractionOffset.x *= screenSize.y * texelSize.x;

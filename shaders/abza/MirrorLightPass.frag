@@ -24,6 +24,7 @@ layout(location = 0) out vec4 texBuffer14;
 #endif
 
 #include "/abza/Companion.glsl"
+#include "/abza/RainCover.glsl"
 
 #ifdef ABZA_MIRROR_LIGHTING
     uniform sampler2D scMirrorAlbedo;
@@ -122,7 +123,7 @@ layout(location = 0) out vec4 texBuffer14;
         normal = dot(normal, rayDir) > 0.0 ? -normal : normal;
         float occlusion = detailed ? abzaMirrorOcclusion(texel, view, worldPos, normal, surface) : 0.0;
         float blockLevel = float(data.g >> 8u) / 255.0;
-        float skyLevel = float(data.g & 255u) / 255.0;
+        float skyLevel = abzaOpenSkyLight(float(data.g & 255u) / 255.0, worldPos + cameraPosition, normal);
         int material = 0;
         float emissive;
         if (data.b >= 0xC000u) {
@@ -178,12 +179,7 @@ layout(location = 0) out vec4 texBuffer14;
             color += shadow + subsurfaceScattering * abzaPlantGlow(rayDir, shadowDirection);
         #endif
 
-        #ifdef MOD_NIGHT_VISION_COMPAT
-            vec3 nightLight = pow(texelFetch(colortex4, ivec2(0), 0).rgb, vec3(2.2)) * NIGHT_VISION_BRIGHTNESS;
-        #else
-            vec3 nightLight = vec3(nightVision * NIGHT_VISION_BRIGHTNESS);
-        #endif
-        color += albedo * abzaAmbientLight(blockLevel, skyLevel, worldPos, normal, plant, nightLight) * (1.0 - occlusion);
+        color += albedo * abzaAmbientLight(blockLevel, skyLevel, worldPos, normal, plant, abzaNightLight()) * (1.0 - occlusion);
         return color;
     }
 
@@ -195,9 +191,9 @@ layout(location = 0) out vec4 texBuffer14;
             vec4 albedo, vec4 rawData, vec3 worldPos, vec3 rayDir, ivec2 texel, AbzaMirrorView view, float surface, bool detailed
         ) {
             uvec3 data = uvec3(round(rawData.rgb * 65535.0));
-            float skyLevel = float(data.g & 255u) / 255.0;
             vec3 normal = abzaCompanionOctDecode(vec2(float(data.r >> 8u), float(data.r & 255u)) / 255.0);
             normal = dot(normal, rayDir) > 0.0 ? -normal : normal;
+            float skyLevel = abzaOpenSkyLight(float(data.g & 255u) / 255.0, worldPos + cameraPosition, normal);
             bool water = abzaCompanionIsWater(data.b);
 
             // A mod without the copy (before 0.9.0) leaves Oculus's 16 x 16 missing texture bound instead

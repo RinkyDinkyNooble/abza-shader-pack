@@ -41,7 +41,7 @@
             #define PARALLAX_MAX_REFINEMENTS 8 // [2 3 4 5 6 7 8 9 10 11 12 13 14 15 16]
             #define SMOOTH_PARALLAX_OFFSET 0 // [0 1 2 3 4]
     #endif
-    #define PARALLAX_DEPTH 1.0 // [0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.0 1.2 1.4 1.6 1.8 2.0 2.25 2.5 2.75 3.0 3.5 4.0 4.5 5.0 6.0 7.0 8.0 9.0 10.0]
+    #define PARALLAX_DEPTH 1.0 // [0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.2 1.4 1.6 1.8 2.0 2.25 2.5 2.75 3.0 3.5 4.0 4.5 5.0 6.0 7.0 8.0 9.0 10.0]
     // Water
         #define CAULDRON_WAVE
         #define WATER_TYPE 0 // [0 1]

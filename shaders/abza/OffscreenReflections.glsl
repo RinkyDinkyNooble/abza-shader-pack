@@ -1,9 +1,14 @@
 //
 //  ABZA Shader: reflections of what screen-space reflection can't see
 //
-//  Defining ABZA_COMPANION_DEBUG_VIEW colours every ray traced through the companion cube: green a hit, blue open sky,
-//  red a face not drawn yet; and rays the mirror view answers: yellow a hit, cyan open sky.
+//  Defining ABZA_COMPANION_DEBUG_VIEW (menu: COMPANION_DEBUG_VIEW) colours every ray traced through the companion cube:
+//  green a hit, blue open sky, red a face not drawn yet or a way it can't tell; and rays from the mirror view's plane:
+//  yellow a hit, cyan open sky, magenta a part of the view the mod didn't draw. Screen-space reflection keeps its colours.
 //
+
+#ifdef COMPANION_DEBUG_VIEW
+    #define ABZA_COMPANION_DEBUG_VIEW
+#endif
 
 #include "/abza/Voxels.glsl"
 #include "/abza/Companion.glsl"
@@ -21,7 +26,9 @@
             int result = abzaMirrorReflection(viewToWorldPos(viewPos), mat3(gbufferModelViewInverse) * viewGeoNormal,
                 mat3(gbufferModelViewInverse) * viewRayDir, color);
             #ifdef ABZA_COMPANION_DEBUG_VIEW
-                if (result >= 0) {
+                if (result == 2) {
+                    result = 1;
+                } else if (result >= 0) {
                     color = vec4(result == 1 ? vec3(200.0, 200.0, 0.0) : vec3(0.0, 200.0, 200.0), 1.0);
                     result = 1;
                 }

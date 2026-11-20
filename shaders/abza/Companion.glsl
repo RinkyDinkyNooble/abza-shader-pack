@@ -29,6 +29,7 @@
 
 #if defined ABZA_COMPANION || defined ABZA_MIRROR
     #include "/abza/SurfaceLight.glsl"
+    #include "/abza/RainCover.glsl"
     #ifdef ABZA_COMPANION_WATER
         #include "/abza/WaterSurface.glsl"
     #endif
@@ -134,7 +135,7 @@
         // Surfaces drawn on both sides (plants, panes) face the ray, as Terrain.frag turns them to the camera
         normal = dot(normal, rayDir) > 0.0 ? -normal : normal;
         float blockLevel = float(data.g >> 8u) / 255.0;
-        float skyLevel = float(data.g & 255u) / 255.0;
+        float skyLevel = abzaOpenSkyLight(float(data.g & 255u) / 255.0, surfacePos + cameraPosition, normal);
         #ifdef ABZA_COMPANION_WATER
             if (abzaCompanionIsWater(data.b)) {
                 // Deep water, as nothing under it is in this layer: its colour and the sky it reflects
@@ -237,8 +238,9 @@
     // when it is farther from the face's origin than the surface in its direction; a crossing within the step's length
     // is refined by halving and is a hit when the refined point lies on the surface, clear of the reflecting surface's
     // plane (planeNormal through worldPos). Past the march, far surfaces (distant terrain, Distant Horizons LODs) are
-    // read in the ray's direction. Returns 1 on a hit (colour and distance travelled in color), 0 when the cube sees
-    // open sky in the ray's way, -1 where part of the cube hasn't been drawn yet or the ray's way is unknown.
+    // read in the ray's direction and count where they lie past the marched part of the ray. Returns 1 on a hit (colour
+    // and distance travelled in color), 0 when the cube sees open sky in the ray's way, -1 where part of the cube hasn't
+    // been drawn yet or the ray's way is unknown.
     int abzaCompanionReflection(vec3 worldPos, vec3 worldDir, vec3 planeNormal, out vec4 color) {
         color = vec4(0.0);
         float faceSize = texelFetch(scInfo, ivec2(0, 0), 0).z;
@@ -288,7 +290,8 @@
             t += stepLength;
             stepLength *= 1.12;
         }
-        // Surfaces beyond the march barely shift between the ray's start and the faces' origins
+        // Surfaces beyond the march, read in the ray's direction from the faces' origins: a hit only past the part of
+        // the ray already marched, measured along the ray from its start
         vec3 farPoint = worldDir * 65536.0;
         vec3 fromOrigin;
         vec2 coord;
@@ -296,8 +299,8 @@
             return -1;
         }
         float surface = textureLod(scDistance, coord, 0.0).r;
-        if (surface > t) {
-            vec3 surfacePos = abzaCompanionSurfacePoint(farPoint, fromOrigin, surface);
+        vec3 surfacePos = abzaCompanionSurfacePoint(farPoint, fromOrigin, surface);
+        if (surface > 0.0 && dot(surfacePos - worldPos, worldDir) > t) {
             if (dot(surfacePos - worldPos, planeNormal) > ABZA_COMPANION_PLANE_MARGIN) {
                 color = vec4(abzaCompanionShade(coord, surfacePos, worldDir), distance(worldPos, surfacePos));
                 return 1;

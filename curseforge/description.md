@@ -15,14 +15,14 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 <tr><td><strong>Forge</strong></td><td>47</td></tr>
 <tr><td><strong>Oculus</strong></td><td>1.8.0, with Embeddium</td></tr>
 <tr><td><strong>Distant Horizons</strong></td><td><span style="color:#3598db"><strong>Optional</strong></span>, tested with 3.3.2</td></tr>
-<tr><td><strong><a href="https://github.com/RinkyDinkyNooble/shaders-companion">Shaders Companion</a></strong></td><td><span style="color:#3598db"><strong>Optional</strong></span>, 0.9.3: mirrors in water and glass, dry ground under glass roofs</td></tr>
+<tr><td><strong><a href="https://github.com/RinkyDinkyNooble/shaders-companion">Shaders Companion</a></strong></td><td><span style="color:#3598db"><strong>Optional</strong></span>, 1.0.0: mirrors in water and glass, dry ground under glass roofs</td></tr>
 </table>
 
 ***
 
 ## Mirrors With Shaders Companion
 
-With the [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) mod installed, water and stained or tinted glass work as <span style="color:#2dc26b"><strong>mirrors</strong></span>: they show yourself, the mobs, chests and buildings behind you and Distant Horizons' far terrain, with the same light and shadows as the rest of the world. Without the mod nothing changes: reflections show what is on screen.
+With the [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) mod installed, water and stained or tinted glass work as <span style="color:#2dc26b"><strong>mirrors</strong></span>: they show yourself, the mobs, chests and buildings behind you and Distant Horizons' far terrain, with the same light and shadows as the rest of the world. Without the mod nothing changes: reflections show what is on screen. The mod installs its own copy of this pack, "ABZA Shader.zip", with its reflection options on; in this download they are off (Reflection).
 
 <span style="color:#e67e23"><strong>The mirror view is very experimental and may have issues.</strong></span> It doesn't always work perfectly yet. To turn it off, switch off "Shaders Companion mirror view" (Reflection); the other Shaders Companion reflections keep working.
 
@@ -53,13 +53,13 @@ With the [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-compani
 
 ## Presets
 
-"Profile" on the main shader screen sets every performance option at once. "ABZA modpack", on the same screen, makes water on Earth reflect the modpack's large square sun. Standard turns it off and uses Metered exposure, ABZA turns it on and uses Steady exposure, and the other presets leave both as they are.
+"Profile" on the main shader screen sets every performance option at once. "ABZA modpack", on the same screen, makes water on Earth reflect the modpack's large square sun. Standard turns it off, ABZA turns it on, and the other presets leave it as it is. Every preset uses Steady exposure.
 
 <table>
 <tr><th align="left">Preset</th><th align="left">What it sets</th></tr>
 <tr><td><strong>Potato</strong></td><td>Every costly effect off or at its lowest; a 256-pixel shadow map out to 16 blocks, no mob shadows</td></tr>
-<tr><td><strong>Standard</strong> (<span style="color:#2dc26b"><strong>default</strong></span>)</td><td>The balanced preset the pack is tuned at: 1024-pixel shadows out to 80 blocks, reflections, clouds, light shafts, ambient occlusion, Metered exposure</td></tr>
-<tr><td><strong>ABZA</strong></td><td>Standard with "ABZA modpack" on and Steady exposure</td></tr>
+<tr><td><strong>Standard</strong> (<span style="color:#2dc26b"><strong>default</strong></span>)</td><td>The balanced preset the pack is tuned at: 1024-pixel shadows out to 80 blocks, reflections, clouds, light shafts, ambient occlusion, Steady exposure</td></tr>
+<tr><td><strong>ABZA</strong></td><td>Standard with "ABZA modpack" on</td></tr>
 <tr><td><strong>High</strong></td><td>Standard with 2048-pixel shadows, sharper ground textures, depth of field and underwater caustics</td></tr>
 <tr><td><strong>Ultra</strong></td><td>Standard with 4096-pixel shadows, coloured shadows from glass, cloud shadows, underwater caustics, depth of field, reflections on every surface that isn't fully rough, and sharper ground textures</td></tr>
 <tr><td><strong>Max</strong></td><td>Ultra with ray-traced bounce light (4 rays per pixel)</td></tr>
@@ -118,7 +118,8 @@ With the [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-compani
 
 *   **Ad Astra's sky:** the sun, moon and planets Ad Astra draws are the visible ones, and the shader's light, shadows and light shafts come from that same sun. Water reflects the sun's square shape. Ad Astra's coloured stars keep their colours, and on airless worlds they stay visible by day.
 *   **Planet fog** in each biome's own fog colour, from the ground to the horizon, Distant Horizons terrain included.
-*   **Exposure modes** (Post processing > Exposure): Metered (the default, Sundial's own) follows the brightness on screen; Steady (the ABZA preset) follows the time of day, the weather and the world, never where you look, and "Night lift" sets how much it brightens nights and caves; Off keeps one exposure per world. Dark worlds stay dark in every mode.
+*   **Exposure modes** (Post processing > Exposure): Steady (the default) follows the time of day, the weather and the world, never where you look, and "Night lift" sets how much it brightens nights and caves; Metered (Sundial's own) follows the brightness on screen; Off keeps one exposure per world. Dark worlds stay dark in every mode.
+*   **Thin glass:** glass bends what is behind it only by its surface detail, like a window pane, so the room or street behind it stays in place at shallow angles ("Thin glass", Texture).
 *   **Glowing ores,** vanilla and modded: only the ore-coloured pixels glow.
 *   **Shading where blocks meet:** crease shading on top of screen-space ambient occlusion, and vanilla's block corner shading. Ambient occlusion and ray-traced bounce light each have a switch (Lighting > Ray tracing).
 *   **Sunshine sheen:** a soft sunlit highlight on ground and grass, plants that glow when lit from behind, and darker shade.

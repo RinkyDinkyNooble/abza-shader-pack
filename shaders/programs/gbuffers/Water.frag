@@ -103,6 +103,7 @@ void main() {
     float wetStrength = 0.0;
     vec3 mcPos = viewToWorldPos(viewPos) + cameraPosition;
     vec3 worldGeoNormal = mat3(gbufferModelViewInverse) * rawData.geoNormal;
+    rawData.lightmap.y = abzaOpenSkyLight(rawData.lightmap.y, mcPos, worldGeoNormal);
     if (rainyStrength > 0.0) {
         float outdoor = abzaRainOutdoor(clamp(15.0 * rawData.lightmap.y - 14.0, 0.0, 1.0), mcPos, worldGeoNormal);
         if (rawData.materialID == MAT_WATER) {

@@ -29,6 +29,7 @@ in vec2 texcoord;
 #define AVERAGE_EXPOSURE_DARKER_TIME 0.5 // [0.5 1.0 1.5 2.0 3.0 4.0 6.0 8.0 10.0 15.0]
 #define AVERAGE_EXPOSURE_TENDENCY 1.0 // [0.01 0.02 0.04 0.07 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.2 2.4 2.6 2.8 3.0 3.2 3.4 3.6 3.8 4.0 4.2 4.4 4.6 4.8 5.0 5.5 6.0 6.5 7.0 7.5 8.0 9.5 10.0 11.0 12.0 13.0 14.0 15.0 16.0 18.0 20.0 25.0 30.0 35.0 40.0 50.0]
 
+#include "/settings/CloudSettings.glsl"
 #include "/settings/GlobalSettings.glsl"
 #include "/libs/Uniform.glsl"
 #include "/libs/Common.glsl"
@@ -59,29 +60,40 @@ vec3 calculateBloomBase(vec2 coord) {
     return result;
 }
 
-float meterBrightness() {
-    const int sampleCount = 8;
-    const float sampleStep = 1.0 / float(sampleCount);
-    const float sampleStart = 0.5 * sampleStep;
-    float sampleMipLevel = ceil(log2(max(screenSize.x, screenSize.y) / float(sampleCount)));
-    float sampleCoordX = sampleStart;
+// The meter's samples: an 8 x 8 grid over the screen, each weighted toward the centre
+const int meterSamples = 8;
 
+float meterSample(int i, int j, float mipLevel, out float weight) {
+    vec2 sampleCoord = (vec2(i, j) + 0.5) / float(meterSamples);
+    vec2 centerOffset = sampleCoord - 0.5;
+    weight = exp2(-max(centerOffset.x * centerOffset.x, centerOffset.y * centerOffset.y) * exp2(AVERAGE_EXPOSURE_CENTER_WEIGHT * 2.0));
+    return dot(textureLod(colortex3, sampleCoord, mipLevel).rgb, vec3(1.0 / 3.0)) * 0.01;
+}
+
+// Power mean of the samples with exponent 1 / AVERAGE_EXPOSURE_TENDENCY, taken of the samples relative to the brightest
+// so that none flushes to zero at high exponents
+float meterBrightness() {
+    float mipLevel = ceil(log2(max(screenSize.x, screenSize.y) / float(meterSamples)));
+    float weight;
+    float brightest = 0.0;
+    for (int i = 0; i < meterSamples; i++) {
+        for (int j = 0; j < meterSamples; j++) {
+            brightest = max(brightest, meterSample(i, j, mipLevel, weight));
+        }
+    }
+    if (brightest <= 0.0) {
+        return 1e-6;
+    }
     float totalBrightness = 0.0;
     float totalWeight = 0.0;
-    for (int i = 0; i < sampleCount; i++) {
-        float sampleCoordY = sampleStart;
-        for (int j = 0; j < sampleCount; j++) {
-            vec2 sampleCoord = vec2(sampleCoordX, sampleCoordY);
-            vec2 centerOffset = sampleCoord - 0.5;
-            float sampleWeight = exp2(-max(centerOffset.x * centerOffset.x, centerOffset.y * centerOffset.y) * exp2(AVERAGE_EXPOSURE_CENTER_WEIGHT * 2.0));
-            totalBrightness += pow(dot(textureLod(colortex3, sampleCoord, sampleMipLevel).rgb, vec3(1.0 / 3.0)) * 0.01, 1.0 / AVERAGE_EXPOSURE_TENDENCY) * sampleWeight;
-            totalWeight += sampleWeight;
-            sampleCoordY += sampleStep;
+    for (int i = 0; i < meterSamples; i++) {
+        for (int j = 0; j < meterSamples; j++) {
+            float brightness = meterSample(i, j, mipLevel, weight);
+            totalBrightness += pow(brightness / brightest, 1.0 / AVERAGE_EXPOSURE_TENDENCY) * weight;
+            totalWeight += weight;
         }
-        sampleCoordX += sampleStep;
     }
-    totalBrightness = pow(totalBrightness / totalWeight, AVERAGE_EXPOSURE_TENDENCY);
-    return max(totalBrightness * 600.0, 1e-6);
+    return max(brightest * pow(totalBrightness / totalWeight, AVERAGE_EXPOSURE_TENDENCY) * 600.0, 1e-6);
 }
 
 // Two brightness averages are kept: a quick one in texel (0, 0) and a slow one in texel (1, 0).
@@ -93,7 +105,7 @@ float adaptBrightness(int slot, float brighterTime, float darkerTime) {
         float currBrightness = meterBrightness();
     #endif
     float prevBrightness = uintBitsToFloat(texelFetch(colortex6, ivec2(slot, 0), 0).x);
-    if (!(prevBrightness > 0.0)) {
+    if (!(prevBrightness > 0.0) || isinf(prevBrightness)) {
         return currBrightness;
     }
     float halfLife = currBrightness > prevBrightness ? brighterTime : darkerTime;

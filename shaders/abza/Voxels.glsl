@@ -183,6 +183,7 @@
         }
     #else
         #include "/abza/SurfaceLight.glsl"
+        #include "/abza/RainCover.glsl"
 
         uniform usampler3D abzaVoxelSampler;
         uniform sampler2D abzaSkinSampler;
@@ -204,9 +205,9 @@
             }
             vec3 tint = vec3(uvec3(face.y, face.y >> 4, face.y >> 8) & 15u) / 15.0;
             float blockLevel = float((face.y >> 12) & 15u) / 15.0;
-            float skyLevel = float((face.y >> 16) & 15u) / 15.0;
             vec3 normal = vec3(0.0);
             normal[side >> 1] = float(side & 1) * 2.0 - 1.0;
+            float skyLevel = abzaOpenSkyLight(float((face.y >> 16) & 15u) / 15.0, hitPos + vec3(cameraPositionInt), normal);
 
             float emission = max(float((header >> 8) & 15u) / 15.0, float(blockLevel > 0.999));
             #ifdef GLOWING_ORES

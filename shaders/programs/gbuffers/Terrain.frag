@@ -176,6 +176,7 @@ void main() {
     vec3 rippleNormal = vec3(0.0, 0.0, 1.0);
     float viewDepthInv = inversesqrt(dot(viewPos, viewPos));
     vec3 worldPos = viewToWorldPos(viewPos) + cameraPosition;
+    rawData.lightmap.y = abzaOpenSkyLight(rawData.lightmap.y, worldPos, mat3(gbufferModelViewInverse) * tbnMatrix[2]);
     if (rainyStrength > 0.0 && material != 8195 && rawData.materialID != MAT_GRASS) {
         float porosity = rawData.porosity * 255.0 / 64.0;
         porosity *= step(porosity, 1.0);

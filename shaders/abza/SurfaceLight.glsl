@@ -12,13 +12,14 @@
         #include "/abza/Ores.glsl"
     #endif
     #include "/abza/Ambient.glsl"
+    #include "/abza/NightLight.glsl"
 
     // Light reaching a surface a reflection finds off screen (a voxel face, the player, a companion cube texel), as
-    // Deferred11, Deferred12 and Composite5 light terrain: block light, the minimum light, and sky light and sunlight
-    // through the shadow map where the world has them. translucent is 1 on thin surfaces sunlight passes through
-    // (plants), which are lit on both sides as Sundial's subsurface scattering lights them on screen.
+    // Deferred11, Deferred12 and Composite5 light terrain: block light, the minimum light, night vision, and sky light
+    // and sunlight through the shadow map where the world has them. translucent is 1 on thin surfaces sunlight passes
+    // through (plants), which are lit on both sides as Sundial's subsurface scattering lights them on screen.
     vec3 abzaSurfaceLight(float blockLevel, float skyLevel, vec3 worldPos, vec3 normal, float translucent) {
-        vec3 light = abzaAmbientLight(blockLevel, skyLevel, worldPos, normal, translucent > 0.5, vec3(nightVision * NIGHT_VISION_BRIGHTNESS));
+        vec3 light = abzaAmbientLight(blockLevel, skyLevel, worldPos, normal, translucent > 0.5, abzaNightLight());
         #ifdef SHADOW_AND_SKY
             #if ABZA_DIRECT_LIGHT == 1
                 float NdotL = dot(normal, shadowDirection);

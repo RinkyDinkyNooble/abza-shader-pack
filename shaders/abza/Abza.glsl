@@ -2,7 +2,7 @@
 //  ABZA Shader: settings and per-world configuration
 //
 
-#define ABZA_SHADER v1_0_30 // [v1_0_30]
+#define ABZA_SHADER v1_1_0 // [v1_1_0]
 
 // Shadow filtering
     #define SHADOW_EDGE_SOFTNESS 0.5 // [0.25 0.5 0.75 1.0 1.5 2.0]
@@ -30,16 +30,19 @@
     #define STARS_BY_DAY 8.0 // [1.0 2.0 4.0 8.0 16.0 32.0]
 
 // Water
-    #define WATER_WAVE_FILTER
+    // #define WATER_WAVE_FILTER
+
+// Glass
+    #define THIN_GLASS_REFRACTION
 
 // Rain
     #define COMPANION_RAIN_COVER
 
 // Reflections
-    #define COMPANION_REFLECTIONS
-    #define COMPANION_MIRROR
-    #define COMPANION_MIRROR_LIGHTING
-    #define COMPANION_REFLECTED_WATER
+    // #define COMPANION_REFLECTIONS
+    // #define COMPANION_MIRROR
+    // #define COMPANION_MIRROR_LIGHTING
+    // #define COMPANION_REFLECTED_WATER
     #define COMPANION_MIRROR_DETAIL 48 // [0 16 32 48 64 96 128 192 256 512]
     // #define WORLD_REFLECTIONS
     #define WORLD_REFLECTION_DISTANCE 48 // [16 24 32 48 64]
@@ -66,7 +69,7 @@
     #define PLANET_FOG_HEIGHT 1.0 // [0.5 0.75 1.0 1.5 2.0 3.0 4.0]
 
 // Exposure
-    #define EXPOSURE_MODE 0 // [0 1 2]
+    #define EXPOSURE_MODE 1 // [0 1 2]
     #define STEADY_LOCAL_ADAPTATION 0.5 // [0.0 0.05 0.1 0.15 0.2 0.3 0.4 0.5 0.75 1.0]
     #define STEADY_NIGHT_LIFT 0.55 // [0.25 0.4 0.55 0.7 0.85 1.0]
     #define EXPOSURE_DARK_LIMIT 1.0 // [0.0 0.25 0.5 1.0 2.0 4.0 8.0]
@@ -74,6 +77,14 @@
 #include "/abza/World.glsl"
 
 #define ABZA_EXPOSURE_FLOOR (ABZA_DARK_FLOOR * EXPOSURE_DARK_LIMIT)
+
+// Refraction through glass and other translucent blocks: true bends only by the surface's normal map (a thin pane, as
+// water), false also by the face itself (a solid block)
+#ifdef THIN_GLASS_REFRACTION
+    #define ABZA_THIN_GLASS true
+#else
+    #define ABZA_THIN_GLASS false
+#endif
 
 // Airless worlds: no distance haze from air and no light shafts
 #if ABZA_AIR == 0

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0 (2026-11-19)
+
+- Steady exposure is the default in every preset, Standard included. Metered (Sundial's own) is under Post processing > Exposure.
+- Glass no longer shifts the room or street behind it at shallow angles: it bends what is behind it only by its surface detail, like a window pane ("Thin glass", Texture, on).
+- Black spots on grass and plants, where a world's light data is wrong, are gone wherever the sky is open above them.
+- With [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) 1.0.0: far water reflects the far shore instead of nearby trees, strips of water past grassy banks keep their mirror, far Distant Horizons water counts for the mirror, and far terrain no longer flickers through near terrain in reflections. The mod installs its own copy of this pack with its reflection options on in every preset, Potato included; in this download they are off (Reflection).
+- With a mod's night vision goggles, Steady exposure no longer brightens the picture twice, and reflections of what is off screen get the goggles' light too.
+- Metered exposure: low "Average exposure tendency" values no longer turn the screen white.
+- "Distant wave smoothing" is off by default.
+- The menu can click through every value of "Water wave scale", "Water wave height" and "Parallax depth" again.
+
 ## 1.0.30 Hotfix (2026-11-15)
 
 - With [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) 0.9.3: reflections on far water and large glass walls no longer flicker. A surface the mirror view newly takes over fades in instead of popping.

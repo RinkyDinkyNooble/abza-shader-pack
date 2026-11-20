@@ -27,6 +27,18 @@
         return clamp(texelFetch(scMirrorInfo, ivec2(8, 0), 0).x, 0.0, 1.0);
     }
 
+    // A ray from the mirror's plane into a part of the view the mod didn't draw: -1 (not answered), or with
+    // ABZA_COMPANION_DEBUG_VIEW 2 and magenta
+    int abzaMirrorUndrawn(out vec4 color) {
+        #ifdef ABZA_COMPANION_DEBUG_VIEW
+            color = vec4(200.0, 0.0, 200.0, 1.0);
+            return 2;
+        #else
+            color = vec4(0.0);
+            return -1;
+        #endif
+    }
+
     // Where a point relative to the camera lies in the mirror view (texture coordinate) and its distance from the
     // mirrored camera; false outside the view
     bool abzaMirrorProject(vec3 p, mat4 toClip, vec3 origin, out vec2 coord, out float fromOrigin) {
@@ -86,7 +98,7 @@
     // length is refined by halving and is a hit when the refined point lies on the surface. Past the march, far
     // surfaces are read in the ray's direction. Returns 1 on a hit (colour and distance travelled in color), 0 when
     // nothing is in the ray's way (open sky), -1 when the mirror view doesn't apply (no mirror this frame, a point off
-    // its plane, or a ray that leaves the view).
+    // its plane, or a ray that leaves the view; 2 with ABZA_COMPANION_DEBUG_VIEW for a part of the view not drawn).
     int abzaMirrorReflection(vec3 worldPos, vec3 worldGeoNormal, vec3 worldDir, out vec4 color) {
         color = vec4(0.0);
         vec4 header = texelFetch(scMirrorInfo, ivec2(0, 0), 0);
@@ -114,7 +126,7 @@
             coord = (coord + farCoord) * 0.5;
             float surface = textureLod(scMirrorDistance, coord, 0.0).r;
             if (surface < -0.5) {
-                return -1;
+                return abzaMirrorUndrawn(color);
             }
             if (surface <= 0.0) {
                 return 0;
@@ -132,7 +144,7 @@
             float surface = textureLod(scMirrorDistance, coord, 0.0).r;
             // -1: a part of the view the mod didn't draw (it draws only where the mirror is on screen)
             if (surface < -0.5) {
-                return -1;
+                return abzaMirrorUndrawn(color);
             }
             float behind = fromOrigin - surface;
             if (surface > 0.0 && behind > 0.0 && behind < stepLength * 1.5 + 0.02 * surface) {
@@ -171,7 +183,7 @@
         }
         float surface = textureLod(scMirrorDistance, coord, 0.0).r;
         if (surface < -0.5) {
-            return -1;
+            return abzaMirrorUndrawn(color);
         }
         if (surface <= 0.0) {
             return 0;

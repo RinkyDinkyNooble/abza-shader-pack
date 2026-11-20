@@ -46,6 +46,13 @@ in vec2 texcoord;
 
 float getFarthestPrevDepth(vec2 coord, out float nearest) {
     float farthest = 0.0;
+    // Texels (0, 0) and (1, 0) hold the exposure averages and the top-right texel the focus depth (Composite9, Composite10)
+    if (coord.x < 3.0 * texelSize.x) {
+        coord.y = max(coord.y, 2.0 * texelSize.y);
+    }
+    if (coord.x > 1.0 - 3.0 * texelSize.x) {
+        coord.y = min(coord.y, 1.0 - 2.0 * texelSize.y);
+    }
 
     vec4 samples = textureGather(colortex7, coord - vec2(0.5) * texelSize, 3);
     farthest = max(max(samples.x, samples.y), max(samples.z, samples.w));
