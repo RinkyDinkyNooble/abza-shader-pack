@@ -83,7 +83,7 @@ vec3 waterWave(vec3 position, vec3 tangentDir) {
     const vec3 stepScale = vec3(vec2(0.2 * WATER_WAVE_HEIGHT / (WATER_WAVE_SCALE * 32.0)), 1.0);
     float tangentDirZ = abs(tangentDir.z * inversesqrt(dot(tangentDir, tangentDir)));
     vec3 stepSize = tangentDir * stepScale;
-    stepSize *= 0.2 / abs(stepSize.z);
+    stepSize *= 0.2 / max(abs(stepSize.z), 1e-6);
     tangentDirZ /= 0.2;
 
     for (int i = 0; i < 5; i++) {

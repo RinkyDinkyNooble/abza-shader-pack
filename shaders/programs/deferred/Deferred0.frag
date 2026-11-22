@@ -16,6 +16,8 @@
 //  Bake depth containing parallax and hand correction for future shaders; Move previous visibility bitmask result to current frame position
 //
 
+#include "/abza/NanDebug.glsl"
+
 #define VB_MAX_BLEDED_FRAMES 20 // [4 5 6 7 8 10 12 14 16 20 24 28 32 36 40 48 56 64 72 80 96 112 128]
 
 layout(location = 0) out vec4 texBuffer0;
@@ -185,6 +187,9 @@ void main() {
             }
         }
     }
+    // The depth's lowest bit marks the selection outline (Deferred11, Deferred12); colortex2 isn't cleared, so only on this frame's geometry
+    bool isLine = gbufferData.materialID == MAT_LINE && gbufferData.depth >= 0.0 && gbufferData.depth < 1.0;
+    gbufferData.depth = uintBitsToFloat((floatBitsToUint(gbufferData.depth) & ~1u) | uint(isLine));
     if (texel.y < 1 && texel.x < 4) {
         if (texel.x > 1) {
             gbufferData.depth = texel.x > 2 ? prevHandAnimation.y : prevHandAnimation.x;
@@ -201,3 +206,7 @@ void main() {
 }
 
 /* RENDERTARGETS: 0,5,6,10,12 */
+
+#define ABZA_NAN_PASS 3
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer0) || abzaNanBad(texBuffer5) || abzaNanBad(texBuffer10) || abzaNanBad(texBuffer12)
+#include "/abza/NanDebugMain.glsl"

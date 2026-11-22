@@ -18,6 +18,8 @@
 
 #extension GL_ARB_gpu_shader5 : enable
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 gbufferData0;
 layout(location = 1) out vec4 gbufferData1;
 layout(location = 2) out vec4 gbufferData2;
@@ -37,6 +39,7 @@ flat in int material;
 #include "/libs/Parallax.glsl"
 #include "/abza/Ores.glsl"
 #include "/abza/RainCover.glsl"
+#include "/abza/MaterialClass.glsl"
 
 void main() {
     GbufferData rawData;
@@ -111,6 +114,9 @@ void main() {
     #ifdef MC_SPECULAR_MAP
         vec4 specularData = textureLod(specular, texcoord, 0.0);
         SPECULAR_FORMAT(rawData, specularData);
+        abzaMaterialClass(rawData, material, specularData);
+    #else
+        abzaMaterialClass(rawData, material, vec4(0.0));
     #endif
 
     #ifndef SPECULAR_EMISSIVE
@@ -270,9 +276,10 @@ void main() {
         float NdotV = dot(rawData.normal, viewDir);
         vec3 edgeNormal = rawData.normal - viewDir * NdotV;
         float curveStart = dot(viewDir, tbnMatrix[2]);
+        curveStart += float(curveStart == 0.0) * 1e-6;
         float weight = clamp(curveStart - curveStart * exp(NdotV / curveStart - 1.0), 0.0, 1.0);
         weight = max(NdotV, curveStart) - weight;
-        rawData.normal = viewDir * weight + edgeNormal * max(0.0, inversesqrt(dot(edgeNormal, edgeNormal) / (1.0 - weight * weight)));
+        rawData.normal = viewDir * weight + edgeNormal * sqrt(max(1.0 - weight * weight, 0.0) / max(dot(edgeNormal, edgeNormal), 1e-20));
     }
     #ifdef DIRECTIONAL_LIGHT_LEVEL
         vec3 dPosDX = dFdx(viewPos);
@@ -305,3 +312,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:012 */
+
+#define ABZA_NAN_PASS 1
+#define ABZA_NAN_OUTPUTS abzaNanBad(gbufferData0) || abzaNanBad(gbufferData1) || abzaNanBad(gbufferData2)
+#include "/abza/NanDebugMain.glsl"

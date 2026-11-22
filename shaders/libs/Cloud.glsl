@@ -116,8 +116,8 @@ vec4 blockyCloud(vec3 baseColor, vec3 atmosphere, vec3 worldPos, vec3 worldDir, 
 }
 
 vec2 raySphereIntersection(float RdotP, float RdotP2, float R2) {
-    float d = sqrt(RdotP2 - R2);
-    vec2 result = max(vec2(-1.0), vec2(-RdotP - d, -RdotP + d));
+    float d = sqrt(max(RdotP2 - R2, 0.0));
+    vec2 result = RdotP2 < R2 ? vec2(-1.0) : max(vec2(-1.0), vec2(-RdotP - d, -RdotP + d));
     return result;
 }
 
@@ -240,6 +240,10 @@ vec4 realisticCloud(
 ) {
     vec3 cloudPos = worldPos;
     cloudPos.y += max(300.0 + earthRadius, cameraPosition.y + WORLD_BASIC_HEIGHT + earthRadius);
+    #ifdef SMOOTH_HORIZON
+        intersectionData.x = dot(cloudPos, worldDir);
+        intersectionData.y = intersectionData.x * intersectionData.x - dot(cloudPos, cloudPos);
+    #endif
     float planetIntersection = intersectionData.z;
     vec2 cloudBottomIntersection = raySphereIntersection(intersectionData.x, intersectionData.y, -pow2(cloudBottomHeight));
     vec2 cloudTopIntersection = raySphereIntersection(intersectionData.x, intersectionData.y, -pow2(cloudTopHeight));
@@ -444,6 +448,10 @@ const float planeCloudHeight = PLANE_CLOUD_HEIGHT + earthRadius + 500.0;
 vec4 planeClouds(vec3 worldPos, vec3 worldDir, vec3 sunDirection, vec3 skyColorUp, vec3 intersectionData) {
     worldPos.y += max(300.0 + earthRadius, cameraPosition.y + WORLD_BASIC_HEIGHT + earthRadius);
 
+    #ifdef SMOOTH_HORIZON
+        intersectionData.x = dot(worldPos, worldDir);
+        intersectionData.y = intersectionData.x * intersectionData.x - dot(worldPos, worldPos);
+    #endif
     float planetIntersection = intersectionData.z;
     float d = sqrt(intersectionData.y + pow2(planeCloudHeight));
     float intersection = max(-1.0, -intersectionData.x + signMul(d, planeCloudHeight - worldPos.y));

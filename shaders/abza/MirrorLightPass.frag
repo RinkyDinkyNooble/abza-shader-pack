@@ -1,10 +1,11 @@
 //
-//  ABZA Shader: Shaders Companion's mirror view lit by the pack's own lighting, for reflections to read: sunlight
+//  ABZA Shader: Shaders Companion's mirror views lit by the pack's own lighting, for reflections to read: sunlight
 //  with soft shadows, light through plants and the sun's highlight as Deferred11 lights terrain, and sky light and
 //  block light as Deferred12 does, with ambient occlusion from the mirror view's own surfaces (Deferred12's own
 //  occlusion and bounce light need the screen). Water and glass are drawn over what the mod's copy of the view shows
 //  behind them. Surfaces farther along the reflection than COMPANION_MIRROR_DETAIL blocks get hard shadows, no
-//  occlusion and calm water.
+//  occlusion and calm water. colortex14 holds one screen-sized tile per mirrored plane, side by side (its
+//  size.buffer in shaders.properties), in the order of the mod's info rows.
 //
 
 #define ABZA_MIRROR_LIGHT_PASS
@@ -25,6 +26,8 @@ layout(location = 0) out vec4 texBuffer14;
 
 #include "/abza/Companion.glsl"
 #include "/abza/RainCover.glsl"
+// Steady ambient occlusion: the screen's occlusion and crease shading from the lattice, for surfaces in the views too
+#include "/abza/LatticeAO.glsl"
 
 #ifdef ABZA_MIRROR_LIGHTING
     uniform sampler2D scMirrorAlbedo;
@@ -43,17 +46,19 @@ layout(location = 0) out vec4 texBuffer14;
     #define ABZA_MIRROR_AO_RADIUS 3.0
     #define ABZA_MIRROR_AO_STRENGTH 1.5
 
-    // The mirror view, for finding its texels' surface points: fromClip takes clip coordinates to positions relative
-    // to the view's origin, and eye is where the view's rays start, relative to the origin (view bobbing moves it off
-    // the origin, which the texels' distances are measured from)
+    // A plane's mirror view, for finding its texels' surface points: fromClip takes clip coordinates to positions
+    // relative to the view's origin, and eye is where the view's rays start, relative to the origin (view bobbing moves
+    // it off the origin, which the texels' distances are measured from). Texels are counted within the view; tile is
+    // the view's corner in the mod's textures.
     struct AbzaMirrorView {
         mat4 fromClip;
         vec3 origin;
         vec3 eye;
         vec2 size;
+        ivec2 tile;
     };
 
-    AbzaMirrorView abzaMirrorViewOf(mat4 toClip, vec3 origin, vec2 size) {
+    AbzaMirrorView abzaMirrorViewOf(mat4 toClip, vec3 origin, vec2 size, ivec2 tile) {
         AbzaMirrorView view;
         mat4 toLocalClip = toClip;
         toLocalClip[3] = toClip * vec4(origin, 1.0);
@@ -62,7 +67,13 @@ layout(location = 0) out vec4 texBuffer14;
         view.eye = eyePoint.xyz / eyePoint.w;
         view.origin = origin;
         view.size = size;
+        view.tile = tile;
         return view;
+    }
+
+    // A texel of the view (counted within it) in one of the mod's textures
+    vec4 abzaMirrorFetch(sampler2D mirrorTexture, AbzaMirrorView view, ivec2 texel) {
+        return texelFetch(mirrorTexture, view.tile + texel, 0);
     }
 
     // A mirror view texel's surface point relative to the camera: the point on the texel's ray from the eye that lies
@@ -84,7 +95,8 @@ layout(location = 0) out vec4 texBuffer14;
         vec3 nextPos = abzaMirrorTexelPos(texel + ivec2(1, 0), view, surface);
         float texelsPerBlock = 1.0 / max(distance(nextPos, worldPos), 1e-4);
         float texelRadius = clamp(ABZA_MIRROR_AO_RADIUS * texelsPerBlock, 2.0, 256.0);
-        vec2 noise = blueNoiseTemporal(texcoord).xy;
+        // By the pixel, not texcoord: colortex14 is a screen wide per plane, and the noise must keep one texel a pixel
+        vec2 noise = blueNoiseTemporal(gl_FragCoord.xy / screenSize).xy;
         float occlusion = 0.0;
         float samples = 0.0;
         for (int i = 0; i < ABZA_MIRROR_AO_SAMPLES; i++) {
@@ -94,7 +106,7 @@ layout(location = 0) out vec4 texBuffer14;
             if (any(lessThan(sampleTexel, ivec2(0))) || any(greaterThanEqual(sampleTexel, ivec2(view.size)))) {
                 continue;
             }
-            float sampleSurface = texelFetch(scMirrorDistance, sampleTexel, 0).r;
+            float sampleSurface = abzaMirrorFetch(scMirrorDistance, view, sampleTexel).r;
             if (sampleSurface < -0.5) {
                 continue;
             }
@@ -113,15 +125,29 @@ layout(location = 0) out vec4 texBuffer14;
     // The lit colour of a surface the mirror view shows, from its albedo and data texels: worldPos is its point relative
     // to the camera, rayDir the direction the view's ray reached it in. detailed: soft shadows and occlusion from the
     // view's own surfaces around texel (the surface at distance surface from the view's origin), else a single shadow
-    // sample and no occlusion
+    // sample and no occlusion. opaque: an opaque surface, lit with its material class's values when it has one
+    // (abza/ViewMaterial.glsl); water and glass keep their own look.
     vec3 abzaMirrorLightSurface(
-        vec3 albedo, vec4 rawData, vec3 worldPos, vec3 rayDir, ivec2 texel, AbzaMirrorView view, float surface, bool detailed
+        vec3 albedo, vec4 rawData, vec3 worldPos, vec3 rayDir, ivec2 texel, AbzaMirrorView view, float surface, bool detailed, bool opaque
     ) {
         uvec3 data = uvec3(round(rawData.rgb * 65535.0));
         vec3 normal = abzaCompanionOctDecode(vec2(float(data.r >> 8u), float(data.r & 255u)) / 255.0);
         // Surfaces drawn on both sides (plants, panes) face the ray, as Terrain.frag turns them to the camera
         normal = dot(normal, rayDir) > 0.0 ? -normal : normal;
-        float occlusion = detailed ? abzaMirrorOcclusion(texel, view, worldPos, normal, surface) : 0.0;
+        // With steady ambient occlusion the lattice's occlusion and crease shading, as Deferred12 shades the same
+        // surface on screen (the view's own occlusion only where the lattice doesn't reach), else the view's own
+        float latticeOcclusion = 0.0;
+        float crease = 0.0;
+        float latticeShare = 0.0;
+        #ifdef ABZA_LATTICE_AO
+            latticeShare = abzaLatticeOcclusionAt(worldPos, normal, false, latticeOcclusion, crease);
+            crease *= latticeShare;
+        #endif
+        // The lattice's occlusion counts by its share: past its window (share 0) it may be 2 (no probe answers)
+        float occlusion = latticeOcclusion * latticeShare;
+        if (detailed && latticeShare < 1.0) {
+            occlusion = mix(abzaMirrorOcclusion(texel, view, worldPos, normal, surface), latticeOcclusion, latticeShare);
+        }
         float blockLevel = float(data.g >> 8u) / 255.0;
         float skyLevel = abzaOpenSkyLight(float(data.g & 255u) / 255.0, worldPos + cameraPosition, normal);
         int material = 0;
@@ -142,21 +168,23 @@ layout(location = 0) out vec4 texBuffer14;
         float porosity = abzaCompanionPorosity(material);
         bool plant = abzaCompanionPlant(material);
         albedo = pow(albedo, vec3(2.2));
+        float NdotV = clamp(dot(-rayDir, normal), 0.0, 1.0);
+        // The screen's material model: a rough surface (F0 0.04), or an opaque block's material class
+        AbzaViewMaterial viewMaterial;
+        abzaViewMaterial(opaque ? abzaViewTexelClass(data.b) : 0, albedo, viewMaterial);
+        vec3 nightLight = abzaNightLight();
 
         vec3 color = albedo * emissive * PBR_BRIGHTNESS * PI;
         #if defined SHADOW_AND_SKY || defined END_FLASH
-            // Deferred11's direct light for a surface without its own smoothness, in world space
-            vec3 f0 = vec3(0.04);
-            vec3 f82 = vec3(1.0);
-            float NdotV = clamp(dot(-rayDir, normal), 0.0, 1.0);
-            vec3 shadowDiffuse = albedo * diffuseAbsorptionWeight(NdotV, 0.0, f0, f82);
+            // Deferred11's direct light, in world space
+            vec3 shadowDiffuse = albedo * abzaViewDiffuse(viewMaterial, NdotV);
             vec3 shadow = sunColor * basicSunlight;
             #ifdef END_FLASH
                 shadow = endFlashIntensity * vec3(0.5, 0.2, 0.8) * basicSunlight;
             #endif
             float NdotL = clamp(dot(normal, shadowDirection), 0.0, 1.0);
-            vec3 shadowSpecular = sunlightSpecular(rayDir, shadowDirection, normal, 0.0, NdotL, NdotV, f0, f82) * airAbsorption(0.0);
-            shadowSpecular += abzaSunSheen(rayDir, shadowDirection, normal, NdotL, NdotV, 0.0, 0.0, float(plant ? MAT_GRASS : MAT_DEFAULT));
+            vec3 shadowSpecular = abzaViewSunSpecular(viewMaterial, rayDir, normal, NdotL, NdotV) +
+                abzaSunSheen(rayDir, shadowDirection, normal, NdotL, NdotV, viewMaterial.smoothness, viewMaterial.metalness, float(plant ? MAT_GRASS : MAT_DEFAULT));
             #ifdef SHADOW_AND_SKY
                 #ifdef CLOUD_SHADOW
                     shadow *= cloudShadow(worldPos, shadowDirection);
@@ -167,20 +195,23 @@ layout(location = 0) out vec4 texBuffer14;
             #ifdef PCSS
                 if (detailed) {
                     percentageCloserSoftShadow(
-                        worldPos, normal, NdotL, length(worldPos), 0.0, porosity, skyLevel, blueNoiseTemporal(texcoord).xy,
+                        worldPos, normal, NdotL, length(worldPos), viewMaterial.smoothness, porosity, skyLevel, blueNoiseTemporal(gl_FragCoord.xy / screenSize).xy,
                         shadow, subsurfaceScattering
                     );
                 }
                 else
             #endif
             {
-                singleSampleShadow(worldPos, normal, NdotL, 0.0, porosity, skyLevel, shadow, subsurfaceScattering);
+                singleSampleShadow(worldPos, normal, NdotL, viewMaterial.smoothness, porosity, skyLevel, shadow, subsurfaceScattering);
             }
-            color += shadow + subsurfaceScattering * abzaPlantGlow(rayDir, shadowDirection);
+            // Deferred12 shades Deferred11's direct light by a share of the crease shading (abzaCreaseDirect)
+            color += (shadow + subsurfaceScattering * abzaPlantGlow(rayDir, shadowDirection)) * abzaCreaseLight(crease, CREASE_SHADING_DIRECT);
         #endif
 
-        color += albedo * abzaAmbientLight(blockLevel, skyLevel, worldPos, normal, plant, abzaNightLight()) * (1.0 - occlusion);
-        return color;
+        // Deferred12's ambient light, and the reflection Composite0 would add (none on a rough surface)
+        color += albedo * abzaAmbientLight(blockLevel, skyLevel, worldPos, normal, plant, nightLight) * abzaViewAmbientWeight(viewMaterial, NdotV) *
+            (1.0 - occlusion) * abzaCreaseLight(crease, 1.0);
+        return color + abzaViewReflection(viewMaterial, rayDir, normal, worldPos, blockLevel, skyLevel, nightLight) * (1.0 - occlusion);
     }
 
     #ifdef ABZA_MIRROR_BEHIND
@@ -197,18 +228,18 @@ layout(location = 0) out vec4 texBuffer14;
             bool water = abzaCompanionIsWater(data.b);
 
             // A mod without the copy (before 0.9.0) leaves Oculus's 16 x 16 missing texture bound instead
-            bool behindKnown = textureSize(scMirrorBehindDistance, 0) == ivec2(view.size);
+            bool behindKnown = textureSize(scMirrorBehindDistance, 0) == textureSize(scMirrorDistance, 0);
             if (!behindKnown && !water) {
-                return abzaMirrorLightSurface(albedo.rgb, rawData, worldPos, rayDir, texel, view, surface, detailed);
+                return abzaMirrorLightSurface(albedo.rgb, rawData, worldPos, rayDir, texel, view, surface, detailed, false);
             }
-            float behindSurface = behindKnown ? texelFetch(scMirrorBehindDistance, texel, 0).r : 0.0;
+            float behindSurface = behindKnown ? abzaMirrorFetch(scMirrorBehindDistance, view, texel).r : 0.0;
             vec3 behind;
             float behindLength = ABZA_MIRROR_DEEP_WATER;
             if (behindSurface > surface) {
                 vec3 behindPos = abzaMirrorTexelPos(texel, view, behindSurface);
                 behind = abzaMirrorLightSurface(
-                    texelFetch(scMirrorBehindAlbedo, texel, 0).rgb, texelFetch(scMirrorBehindData, texel, 0), behindPos, rayDir,
-                    texel, view, behindSurface, false
+                    abzaMirrorFetch(scMirrorBehindAlbedo, view, texel).rgb, abzaMirrorFetch(scMirrorBehindData, view, texel), behindPos, rayDir,
+                    texel, view, behindSurface, false, true
                 );
                 behindLength = distance(behindPos, worldPos);
             }
@@ -227,7 +258,7 @@ layout(location = 0) out vec4 texBuffer14;
                 return abzaSkyReflection(waterColor, worldPos, rayDir, waterNormal, 0.02, skyLevel, skyColorUp);
             }
 
-            vec3 lit = abzaMirrorLightSurface(albedo.rgb, rawData, worldPos, rayDir, texel, view, surface, detailed);
+            vec3 lit = abzaMirrorLightSurface(albedo.rgb, rawData, worldPos, rayDir, texel, view, surface, detailed, false);
             vec3 tint = pow(albedo.rgb, vec3(2.2)) * (1.0 - 0.5 * albedo.a * albedo.a);
             vec3 stain = exp2(sqrt(albedo.a * 1.5) * log2(clamp(tint, 1e-5, 1.0)));
             return abzaSkyReflection(behind * stain + lit * albedo.a, worldPos, rayDir, normal, 0.04, skyLevel, skyColorUp);
@@ -246,30 +277,34 @@ layout(location = 0) out vec4 texBuffer14;
                 return abzaMirrorTranslucent(albedo, rawData, worldPos, rayDir, texel, view, surface, detailed);
             }
         #endif
-        return abzaMirrorLightSurface(albedo.rgb, rawData, worldPos, rayDir, texel, view, surface, detailed);
+        return abzaMirrorLightSurface(albedo.rgb, rawData, worldPos, rayDir, texel, view, surface, detailed, albedo.a > 0.999);
     }
 #endif
 
 void main() {
     texBuffer14 = vec4(0.0);
     #ifdef ABZA_MIRROR_LIGHTING
-        vec4 header = texelFetch(scMirrorInfo, ivec2(0, 0), 0);
+        // This pixel's tile of colortex14 (one screen each), the info row of the same plane, and the plane's view texel
+        // under the pixel
+        int row = min(int(gl_FragCoord.x / screenSize.x), ABZA_MIRROR_PLANES - 1);
+        vec2 local = vec2(gl_FragCoord.x - float(row) * screenSize.x, gl_FragCoord.y) / screenSize;
+        vec4 header = texelFetch(scMirrorInfo, ivec2(0, row), 0);
         if (abs(header.x - 4242.0) > 0.5 || abs(header.y - float(ABZA_MIRROR_PROTOCOL)) > 0.5 || header.z < 1.0) {
             return;
         }
-        ivec2 mirrorTexel = ivec2(texcoord * header.zw);
-        float surface = texelFetch(scMirrorDistance, mirrorTexel, 0).r;
+        ivec2 mirrorTexel = min(ivec2(local * header.zw), ivec2(header.zw) - 1);
+        vec3 origin = texelFetch(scMirrorInfo, ivec2(2, row), 0).xyz;
+        mat4 toClip = mat4(
+            texelFetch(scMirrorInfo, ivec2(3, row), 0), texelFetch(scMirrorInfo, ivec2(4, row), 0),
+            texelFetch(scMirrorInfo, ivec2(5, row), 0), texelFetch(scMirrorInfo, ivec2(6, row), 0)
+        );
+        AbzaMirrorView view = abzaMirrorViewOf(toClip, origin, header.zw, ivec2(texelFetch(scMirrorInfo, ivec2(8, row), 0).yz));
+        float surface = abzaMirrorFetch(scMirrorDistance, view, mirrorTexel).r;
         if (surface <= 0.0) {
             return;
         }
-        vec3 origin = texelFetch(scMirrorInfo, ivec2(2, 0), 0).xyz;
-        mat4 toClip = mat4(
-            texelFetch(scMirrorInfo, ivec2(3, 0), 0), texelFetch(scMirrorInfo, ivec2(4, 0), 0),
-            texelFetch(scMirrorInfo, ivec2(5, 0), 0), texelFetch(scMirrorInfo, ivec2(6, 0), 0)
-        );
-        AbzaMirrorView view = abzaMirrorViewOf(toClip, origin, header.zw);
-        vec4 albedo = texelFetch(scMirrorAlbedo, mirrorTexel, 0);
-        vec4 rawData = texelFetch(scMirrorData, mirrorTexel, 0);
+        vec4 albedo = abzaMirrorFetch(scMirrorAlbedo, view, mirrorTexel);
+        vec4 rawData = abzaMirrorFetch(scMirrorData, view, mirrorTexel);
         vec3 worldPos = abzaMirrorTexelPos(mirrorTexel, view, surface);
         vec3 rayDir = normalize(worldPos - view.origin - view.eye);
         // Full detail out to COMPANION_MIRROR_DETAIL blocks along the reflection and the simpler look past it, blended
@@ -288,3 +323,8 @@ void main() {
 }
 
 /* RENDERTARGETS: 14 */
+
+#define ABZA_NAN_PASS 7
+#define ABZA_NAN_TILED
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer14)
+#include "/abza/NanDebugMain.glsl"

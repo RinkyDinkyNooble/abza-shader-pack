@@ -154,7 +154,7 @@ void main() {
     vec2 midCoord = mc_midTexCoord.st * albedoTexSize;
     vec2 coordToCenter = abs(vertexCoord - mc_midTexCoord.st) * albedoTexSize;
     minCoord = floor(midCoord - coordToCenter) * albedoTexelSize;
-    coordSize = ceil(midCoord + coordToCenter) * albedoTexelSize - minCoord;
+    coordSize = max(ceil(midCoord + coordToCenter) * albedoTexelSize - minCoord, albedoTexelSize);
     coordRange = vec4(minCoord, coordSize);
 
     #if SR_ENABLE

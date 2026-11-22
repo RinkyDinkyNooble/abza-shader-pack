@@ -2,6 +2,22 @@
 
 ABZA Shader is based on Sundial Lite v1.2.0 by GeForceLegend (GPL-3.0). This file lists every change, newest first.
 
+## 2.0.0 (2026-11-22)
+
+- New presets: Low, Medium, High, Ultra and ABZA replace Potato, Standard, High, Ultra and Max. Each adds features to the one before. Low has the clouds and your own shadow; Medium adds ambient occlusion, light shafts, fog, underwater caustics and puddles; High, the default, adds reflections, soft, coloured and cloud shadows and depth of field; Ultra adds a 4096-pixel shadow map and mob shadows. ABZA is High with "ABZA modpack" on. Presets no longer change exposure, TAA style, motion blur or the look options, so those stay as you set them.
+- The defaults are High's: a 2048-pixel shadow map, coloured shadows from glass, cloud shadows, underwater caustics and depth of field are on, and mob shadows are off (your own stays).
+- A new menu. The main page holds Profile, "ABZA modpack" and the screens; each screen shows its common options first and the rest under Advanced, and a Shaders Companion screen holds every option that needs the mod. Every option's description starts with what it costs (Low, Medium, Heavy or EXTREME). Saved settings carry over.
+- Reflections on rough surfaces (metal, polished stone, wet ground) are averaged over frames, so they no longer crawl with grain while you walk. "Rough reflection rays" (Reflections) traces them on part of the screen each frame for frame rate; Half by default.
+- TAA no longer leaves thin lines behind things you walk past. A sharper "TAA style" is new (Post processing); Smooth, Sundial's own, stays the default.
+- Closed rooms and caves no longer change brightness with the time of day outside (Steady exposure).
+- No more grainy trail in the clouds behind mobs and posts moving across the sky, and no dark speckled trails beside your hand and held items while they move.
+- The block selection outline no longer darkens the blocks around it.
+- Metals keep their texture in reflections, resource packs' metals included, instead of turning into one flat colour.
+- On AMD and Intel graphics, several spots that could show black or flashing pixels are fixed: flat areas with sharpening on, the centre of the screen, Distant Horizons terrain seen edge-on.
+- The rain haze no longer applies under water or in lava.
+- New options from Sundial Lite's updates since 1.2.0, off by default: "Sub-surface scattering fade" (Shadows > Advanced), "Smooth light on water and glass" (Lighting > Advanced), "Depth-relative refraction" (Water and glass > Advanced) and "Smooth horizon" (Sky and clouds > Advanced).
+- With [Shaders Companion](https://www.curseforge.com/minecraft/mc-mods/shaders-companion) 2.0.0: up to four mirrors at once, steady ambient occlusion that doesn't change with the view, reflections of what is off screen that keep lamps' glow and are shaded like the screen, the Auto-PBR Material Engine, held items that reflect the world, and an option for closed doors to keep light out. The mod installs its own copy of this pack with these options and a Max preset; in this download they are off.
+
 ## 1.1.0 (2026-11-19)
 
 - Steady exposure is the default in every preset, Standard included. Metered (Sundial's own) is under Post processing > Exposure.

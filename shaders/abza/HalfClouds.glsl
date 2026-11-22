@@ -8,17 +8,26 @@
 uniform sampler2D colortex8;
 uniform sampler2D colortex9;
 
-float abzaCameraRadius() {
-    return gbufferModelViewInverse[3].y + max(300.0 + earthRadius, cameraPosition.y + WORLD_BASIC_HEIGHT + earthRadius);
+// The camera in the planet-centred space of the atmosphere and clouds
+vec3 abzaPlanetCamera() {
+    return gbufferModelViewInverse[3].xyz + vec3(0.0, max(300.0 + earthRadius, cameraPosition.y + WORLD_BASIC_HEIGHT + earthRadius), 0.0);
 }
 
-// Distance along a view ray to where it enters the realistic cloud layer, as in realisticCloud
-float abzaCloudStart(vec3 intersectionData, out bool hit) {
-    float cameraRadius = abzaCameraRadius();
-    vec2 bottom = raySphereIntersection(intersectionData.x, intersectionData.y, -pow2(cloudBottomHeight));
-    vec2 top = raySphereIntersection(intersectionData.x, intersectionData.y, -pow2(cloudTopHeight));
+float abzaCameraRadius() {
+    return abzaPlanetCamera().y;
+}
+
+// Distance along a view ray to where it enters the realistic cloud layer, as in realisticCloud: the layer along the
+// ray's own direction, the planet hit (planetIntersectionData's z) as given
+float abzaCloudStart(vec3 worldDir, float planetIntersection, out bool hit) {
+    vec3 planetCamera = abzaPlanetCamera();
+    float RdotP = dot(planetCamera, worldDir);
+    float RdotP2 = RdotP * RdotP - dot(planetCamera, planetCamera);
+    float cameraRadius = planetCamera.y;
+    vec2 bottom = raySphereIntersection(RdotP, RdotP2, -pow2(cloudBottomHeight));
+    vec2 top = raySphereIntersection(RdotP, RdotP2, -pow2(cloudTopHeight));
     if (cameraRadius < cloudBottomHeight) {
-        hit = intersectionData.z < 0.0;
+        hit = planetIntersection < 0.0;
         return bottom.y;
     }
     hit = cameraRadius < cloudTopHeight || top.y > 0.0;
@@ -32,7 +41,7 @@ float abzaCloudStart(vec3 intersectionData, out bool hit) {
         if (abzaCameraRadius() >= cloudBottomHeight) {
             return false;
         }
-        vec3 planetCamera = gbufferModelViewInverse[3].xyz + vec3(0.0, max(300.0 + earthRadius, cameraPosition.y + WORLD_BASIC_HEIGHT + earthRadius), 0.0);
+        vec3 planetCamera = abzaPlanetCamera();
         for (int i = 0; i < 4; i++) {
             ivec2 texel = fullTexel + ivec2(i & 1, i >> 1);
             vec2 coord = (vec2(texel) + 0.5) * texelSize;
@@ -68,20 +77,24 @@ float abzaCloudStart(vec3 intersectionData, out bool hit) {
 
     // Blends this frame's clouds with the previous frame's clouds at the same point of the sky (colortex8 and colortex9 before this pass writes them).
     // The point is reprojected at the cloud depth, or where the ray enters the cloud layer; texels from another frame are ignored.
-    void abzaAccumulateClouds(vec2 coord, vec3 intersectionData, inout vec4 light, inout vec4 info) {
+    // keep: the previous frames' share where all four texels around the point hold clouds; 1.0 carries the history over
+    // unchanged for a texel whose clouds are hidden, which then counts a little less each frame (colortex9's b, 0.99 times
+    // its history's) so clouds hidden for long, which have drifted since, give way to new ones. Returns false where none of
+    // the four holds clouds.
+    bool abzaAccumulateClouds(vec2 coord, vec3 rayDir, float planetIntersection, float keep, inout vec4 light, inout vec4 info) {
         bool hit = true;
-        float rayLength = info.g > 0.0 ? info.g : abzaCloudStart(intersectionData, hit);
+        float rayLength = info.g > 0.0 ? info.g : abzaCloudStart(rayDir, planetIntersection, hit);
         if (!hit || dot(cameraMovement, cameraMovement) > 1024.0) {
-            return;
+            return false;
         }
         vec3 worldDir = normalize(mat3(gbufferModelViewInverse) * projectionToViewPos(vec3(coord * 2.0 - 1.0, 1.0)));
         vec3 prevView = prevWorldToViewPos(gbufferModelViewInverse[3].xyz + worldDir * rayLength + cameraMovement);
         if (prevView.z > -1e-3) {
-            return;
+            return false;
         }
         vec2 prevCoord = prevViewToProjectionPos(prevView).xy * 0.5 + 0.5;
         if (any(greaterThanEqual(abs(prevCoord - 0.5), vec2(0.5)))) {
-            return;
+            return false;
         }
         vec2 halfPos = prevCoord * screenSize * 0.5 - 0.5;
         ivec2 corner = ivec2(floor(halfPos));
@@ -108,9 +121,12 @@ float abzaCloudStart(vec3 intersectionData, out bool hit) {
             }
         }
         if (totalWeight < 1e-3) {
-            return;
+            return false;
         }
-        float historyWeight = abzaCloudHistoryWeight * min(totalWeight, 1.0);
+        float historyWeight = keep >= 1.0 ? 1.0 : keep * min(totalWeight, 1.0);
+        if (keep >= 1.0) {
+            info.b = 0.99 * min(totalWeight, 1.0);
+        }
         light = mix(light, historyLight / totalWeight, historyWeight);
         info.r = mix(info.r, historyAlpha / totalWeight, historyWeight);
         if (info.g > 0.0 && historyDepth > 0.0) {
@@ -118,14 +134,15 @@ float abzaCloudStart(vec3 intersectionData, out bool hit) {
         } else if (historyDepth > 0.0) {
             info.g = historyDepth;
         }
+        return true;
     }
 #else
     // Blends the half-resolution clouds over the background at this pixel: bilinear over the computed half-resolution texels.
     // Solid surfaces in front of the cloud layer get no clouds.
-    vec4 abzaHalfResClouds(vec3 baseColor, vec3 intersectionData, float backDepth, out float cloudDepth) {
+    vec4 abzaHalfResClouds(vec3 baseColor, vec3 worldDir, float planetIntersection, float backDepth, out float cloudDepth) {
         cloudDepth = -1.0;
         bool hit;
-        float start = abzaCloudStart(intersectionData, hit);
+        float start = abzaCloudStart(worldDir, planetIntersection, hit);
         if (!hit || (backDepth > 1e-5 && start >= backDepth)) {
             return vec4(baseColor, 0.0);
         }

@@ -16,6 +16,8 @@
 //  Bloom stage 1: generate mips; Motion blur stage 1: blur scaled with velocity; Average exposure and smooth center depth
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 texBuffer3;
 layout(location = 1) out vec4 texBuffer4;
 layout(location = 2) out vec4 texBuffer7;
@@ -159,3 +161,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:347 */
+
+#define ABZA_NAN_PASS 22
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer3) || abzaNanBad(texBuffer4) || abzaNanBad(texBuffer7)
+#include "/abza/NanDebugMain.glsl"

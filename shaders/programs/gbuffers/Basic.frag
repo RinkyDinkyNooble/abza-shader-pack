@@ -16,6 +16,8 @@
 //  Gbuffer for selection outline and leash (basic)
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 gbufferData0;
 layout(location = 1) out vec4 gbufferData1;
 layout(location = 2) out vec4 gbufferData2;
@@ -47,3 +49,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:012 */
+
+#define ABZA_NAN_PASS 1
+#define ABZA_NAN_OUTPUTS abzaNanBad(gbufferData0) || abzaNanBad(gbufferData1) || abzaNanBad(gbufferData2)
+#include "/abza/NanDebugMain.glsl"

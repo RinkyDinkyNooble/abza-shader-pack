@@ -120,7 +120,7 @@ float geometry(float NdotV, float NdotL, float a) {
 vec3 F_AdobeF82(vec3 F0, vec3 F82, float VdotH)
 {
     const float K = 49.0 / 46656.0;
-    float Fc = pow(1.0 - VdotH, 5.0);
+    float Fc = pow(clamp(1.0 - VdotH, 0.0, 1.0), 5.0);
     vec3 b = (K - K * F82) * (7776.0 + 9031.0 * F0);
     return clamp(F0 + Fc * ((1.0 - F0) - b * (VdotH - VdotH * VdotH)), 0.0, 1.0);
 }

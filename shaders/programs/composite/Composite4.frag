@@ -18,6 +18,8 @@
 
 #extension GL_ARB_gpu_shader5 : enable
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 texBuffer3;
 
 in vec2 texcoord;
@@ -78,7 +80,7 @@ void main() {
     }
     float cloudDepth;
     #ifdef ABZA_HALF_RES_CLOUDS
-        solidColor = abzaHalfResClouds(solidColor.rgb, intersectionData.xyz, backDepth, cloudDepth);
+        solidColor = abzaHalfResClouds(solidColor.rgb, worldDir, intersectionData.z, backDepth, cloudDepth);
     #else
     solidColor = sampleClouds(
         solidColor.rgb, backColor, gbufferModelViewInverse[3].xyz, worldDir, shadowDirection, sunDirection, skyColorUp, intersectionData.xyz, backDepth, cloudDepth
@@ -120,3 +122,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:3 */
+
+#define ABZA_NAN_PASS 15
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer3)
+#include "/abza/NanDebugMain.glsl"

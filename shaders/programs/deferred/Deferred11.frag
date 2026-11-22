@@ -18,6 +18,8 @@
 
 #extension GL_ARB_gpu_shader5 : enable
 
+#include "/abza/NanDebug.glsl"
+
 #ifndef ABZA_MIRROR_LIGHT_PASS
 layout(location = 0) out vec4 texBuffer3;
 layout(location = 1) out uint texBuffer6;
@@ -60,18 +62,21 @@ const float shadowDistance = 80.0; // [16.0 32.0 48.0 64.0 80.0 120.0 160.0 200.
         subsurfaceScattering *= clamp(SUBSERFACE_SCATTERING_STRENTGH * 1e+10, 0.0, 1.0);
         if (weatherStrength < 0.999) {
             vec3 sssShadowCoord = worldPosToShadowCoordNoDistort(worldPos);
-            float normalOffsetLen = (viewLength * 2e-3 + 2e-2) * (1.0 + sqrt(1.0 - NdotL));
+            float normalOffsetLen = (viewLength * 2e-3 + 2e-2) * (1.0 + sqrt(max(1.0 - NdotL, 0.0)));
             vec3 normalOffset = mat3(shadowModelViewProj0, shadowModelViewProj1, shadowModelViewProj2) * (worldGeoNormal * normalOffsetLen * 4096.0 / realShadowMapResolution);
             normalOffset.z *= 0.1;
 
             vec3 basicShadowCoordNoDistort = sssShadowCoord + normalOffset;
             sssShadowCoord = distortShadowCoord(sssShadowCoord - normalOffset);
-            float clipLengthInv = inversesqrt(dot(basicShadowCoordNoDistort.xy, basicShadowCoordNoDistort.xy));
-            float distortFactor = clipLengthInv * log(distortionStrength / clipLengthInv + 1.0) / log(distortionStrength + 1.0);
+            float clipLengthInv = inversesqrt(max(dot(basicShadowCoordNoDistort.xy, basicShadowCoordNoDistort.xy), 1e-20));
+            float distortFactor = clipLengthInv * log2(distortionStrength / clipLengthInv + 1.0) / log2(distortionStrength + 1.0);
             vec3 basicShadowCoord = basicShadowCoordNoDistort;
             basicShadowCoord.st = basicShadowCoord.st * 0.25 * distortFactor + 0.75;
+            #ifdef SUBSURFACE_SCATTERING_FADE
+                float distortDerivative = distortionStrength / (log(distortionStrength + 1.0) * (distortionStrength / clipLengthInv + 1.0));
+            #endif
 
-            float normalFactor = clamp(pow(NdotL, pow2(1.0 - smoothness * 0.3)), 0.0, 1.0);
+            float normalFactor = clamp(pow(max(NdotL, 0.0), pow2(1.0 - smoothness * 0.3)), 0.0, 1.0);
             NdotL = abs(dot(worldGeoNormal, shadowDirection));
             NdotL = NdotL + (1.0 - NdotL) * clamp(porosity * 255.0 / 191.0 - 64.0 / 191.0, 0.0, 1.0);
 
@@ -113,7 +118,11 @@ const float shadowDistance = 80.0; // [16.0 32.0 48.0 64.0 80.0 120.0 160.0 200.
                 float sampleRadius = noise.y * 1.0 / PCSS_SAMPLES + 1e-6;
                 bool needSubsurfaceScattering = porosity > 64.5 / 255.0;
 
-                float sssRadius = (0.25 + 0.25 / filterRadius) * distortFactor;
+                #ifdef SUBSURFACE_SCATTERING_FADE
+                    float sssRadius = (0.25 + 0.25 / filterRadius) * distortDerivative;
+                #else
+                    float sssRadius = (0.25 + 0.25 / filterRadius) * distortFactor;
+                #endif
                 float transparentShadow = 1e-6;
                 vec3 transparentShadowColor = vec3(0.0);
                 float opticalDepth = 0.0;
@@ -159,7 +168,16 @@ const float shadowDistance = 80.0; // [16.0 32.0 48.0 64.0 80.0 120.0 160.0 200.
                 if (needSubsurfaceScattering && SUBSERFACE_SCATTERING_STRENTGH > 0.0) {
                     const float absorptionScale = SUBSERFACE_SCATTERING_STRENTGH / (191.0);
                     float absorptionBeta = -4e+3 * 0.5 * 1.44269502 / max(porosity * absorptionScale * 255.0 - absorptionScale * 64.0, 1e-5) * opticalDepth / PCSS_SAMPLES;
-                    subsurfaceScattering *= exp2(absorptionBeta) * (1.0 - solidShadow) * NdotL;
+                    #ifdef SUBSURFACE_SCATTERING_FADE
+                        float fade = clamp(viewLength / 16.0 - shadowDistance / 16.0, 0.0, 1.0);
+                        subsurfaceScattering *= mix(
+                            exp2(absorptionBeta) * (1.0 - solidShadow) * NdotL,
+                            skyLight * (1.0 - normalFactor) * NdotL * step(64.5 / 255.0, porosity),
+                            fade
+                        );
+                    #else
+                        subsurfaceScattering *= exp2(absorptionBeta) * (1.0 - solidShadow) * NdotL;
+                    #endif
                 }
                 shadow *= solidShadow;
             }
@@ -174,21 +192,22 @@ const float shadowDistance = 80.0; // [16.0 32.0 48.0 64.0 80.0 120.0 160.0 200.
         vec4 originProjPos = vec4(vec3(gbufferProjection[0].x, gbufferProjection[1].y, gbufferProjection[2].z) * viewPos, -viewPos.z);
         originProjPos.z += gbufferProjection[3].z;
         originProjPos.xy += gbufferProjection[2].xy * viewPos.z;
+        vec4 projDirection = vec4(vec3(gbufferProjection[0].x, gbufferProjection[1].y, gbufferProjection[2].z) * viewShadowDirection, -viewShadowDirection.z);
+        projDirection.xy += gbufferProjection[2].xy * viewShadowDirection.z;
         #ifdef TAA
             originProjPos.xy += taaOffset * originProjPos.w;
+            projDirection.xy += taaOffset * projDirection.w;
         #endif
         float projScale = 0.5 / originProjPos.w;
         vec4 originCoord = vec4(originProjPos.xyz * projScale + 0.5, 0.0);
 
-        vec4 projDirection = vec4(vec3(gbufferProjection[0].x, gbufferProjection[1].y, gbufferProjection[2].z) * viewShadowDirection, -viewShadowDirection.z);
-        projDirection.xy += gbufferProjection[2].xy * viewShadowDirection.z;
         float traceLength = projIntersectionScreenEdge(originProjPos, projDirection);
         vec4 targetProjPos = originProjPos + projDirection * traceLength;
         float targetProjScale = 0.5 / targetProjPos.w;
         vec4 targetCoord = vec4(targetProjPos.xyz * targetProjScale + 0.5, 0.0);
 
         #ifdef LOD
-            projDirection.z = projDirection.z / gbufferProjection[2].z * projLod()[2].z;
+            projDirection.z = viewShadowDirection.z * projLod()[2].z;
             float originProjDepthLod = viewPos.z * projLod()[2].z + projLod()[3].z;
             originCoord.w = originProjDepthLod * projScale + 0.5;
             targetCoord.w = (originProjDepthLod + projDirection.z * traceLength) * targetProjScale + 0.5;
@@ -232,7 +251,8 @@ const float shadowDistance = 80.0; // [16.0 32.0 48.0 64.0 80.0 120.0 160.0 200.
             if (any(greaterThan(floatBitsToUint(sampleCoord.xy), floatBitsToUint(screenEdge))) || shadow < 0.01) {
                 break;
             }
-            float sampleDepth = uintBitsToFloat(texelFetch(colortex6, ivec2(sampleCoord.st * screenSize), 0).r);
+            uint sampleBits = texelFetch(colortex6, ivec2(sampleCoord.st * screenSize), 0).r;
+            float sampleDepth = uintBitsToFloat(sampleBits);
             bool hit;
             #ifdef LOD
                 if (sampleDepth < 0.0) {
@@ -242,7 +262,7 @@ const float shadowDistance = 80.0; // [16.0 32.0 48.0 64.0 80.0 120.0 160.0 200.
             #endif
             {
                 sampleDepth -= handOffset;
-                hit = abs(sampleCoord.z - sampleDepth) < maximumThickness && sampleDepth < 1.0;
+                hit = abs(sampleCoord.z - sampleDepth) < maximumThickness && sampleDepth < 1.0 && (sampleBits & 1u) == 0u;
                 if (hit) {
                     vec2 sampleTexelCoord = sampleCoord.xy * screenSize + 0.5;
                     vec2 sampleTexel = floor(sampleTexelCoord);
@@ -297,7 +317,8 @@ void main() {
         viewPos = viewDirection / (gbufferProjectionInverse[2].w * (depthWithHand * 2.0 - 1.0) + gbufferProjectionInverse[3].w);
     }
     float blendedFrames = gbufferData.albedo.w * 255.0;
-    texBuffer6 = packF8D24(blendedFrames, gbufferData.depth);
+    // No ambient occlusion history on the selection outline (the depth's lowest bit, Deferred0)
+    texBuffer6 = packF8D24(blendedFrames * float((floatBitsToUint(depthWithParallax) & 1u) == 0u), gbufferData.depth);
     if (texel.y < 1 && texel.x < 4) {
         texBuffer6 = floatBitsToUint(depthWithParallax);
     }
@@ -376,4 +397,8 @@ void main() {
 }
 
 /* DRAWBUFFERS:36 */
+
+#define ABZA_NAN_PASS 4
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer3)
+#include "/abza/NanDebugMain.glsl"
 #endif

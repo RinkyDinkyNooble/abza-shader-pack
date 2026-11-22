@@ -25,12 +25,14 @@
 out vec3 color;
 out vec3 viewPos;
 flat out vec3 blockData;
+flat out vec3 faceNormal;
 
 #include "/settings/GlobalSettings.glsl"
 #include "/libs/Uniform.glsl"
 
 void main() {
     viewPos = (gl_ModelViewMatrix * gl_Vertex).xyz;
+    faceNormal = normalize(gl_NormalMatrix * gl_Normal);
     gl_Position = dhProjection * vec4(viewPos, 1.0);
 
     color = gl_Color.rgb;

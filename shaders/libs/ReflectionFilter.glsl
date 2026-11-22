@@ -31,7 +31,8 @@ vec4 reflectionFilter(vec4 originData, ivec2 centerTexel, float offset, bool use
                     100.0 * log2(1.0 - abs(roughness - pow2(1.0 - sampleSmoothness))) -
                     1.44269502 * abs(originReflectionDepth - sampleReflectionDepth) / (max(originReflectionDepth, sampleReflectionDepth) + 0.2) * originSmoothness
                 ) *
-                step(0.0025, sampleSmoothness);
+                // ABZA: pixels a group's tracer answers for (abza/ReflectionRate.glsl) hold no reflection of their own yet
+                step(0.0025, sampleSmoothness) * step(0.0, sampleReflectionDepth);
             weight = clamp(weight, 0.0, 1.0);
             if (abs(i) != -abs(j) && all(lessThan(floatBitsToUint(sampleTexelCoord * texelSize), floatBitsToUint(screenEdge)))) {
                 accumulation += sampleData.rgb * weight;

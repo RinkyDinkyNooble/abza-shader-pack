@@ -16,6 +16,8 @@
 //  Post processing
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 texBuffer0;
 
 in vec2 texcoord;
@@ -455,10 +457,13 @@ void main() {
         screenDepth += float(screenDepth == 1.0);
     }
     #ifdef SHADOW_AND_SKY
-        float skyLight = clamp(unpack2x8Bit(texelFetch(colortex2, ivec2(sampleCoord * screenSize), 0).z).y + float(screenDepth > 1.0), 0.0, 1.0);
-        skyLight = max(clamp(skyLight * (1.0 - exp2(-viewDepth * 0.01 * RAIN_BLOOM_FOG_DENSITY)) + float(screenDepth == 2.0), 0.0, 1.0), eyeBrightnessSmooth.y / 240.0);
-        finalColor = mix(bloomColor, finalColor, exp2(-weatherStrength * weatherStrength * skyLight * RAIN_BLOOM_FOG_DENSITY * 0.03 * viewDepth * exp2(-cameraPosition.y / 2000.0 - WORLD_BASIC_HEIGHT / 2000.0)));
+        if (isEyeInWater == 0) {
+            float skyLight = clamp(unpack2x8Bit(texelFetch(colortex2, ivec2(sampleCoord * screenSize), 0).z).y + float(screenDepth > 1.0), 0.0, 1.0);
+            skyLight = max(clamp(skyLight * (1.0 - exp2(-viewDepth * 0.01 * RAIN_BLOOM_FOG_DENSITY)) + float(screenDepth == 2.0), 0.0, 1.0), eyeBrightnessSmooth.y / 240.0);
+            finalColor = mix(bloomColor, finalColor, exp2(-weatherStrength * weatherStrength * skyLight * RAIN_BLOOM_FOG_DENSITY * 0.03 * viewDepth * exp2(-cameraPosition.y / 2000.0 - WORLD_BASIC_HEIGHT / 2000.0)));
+        }
     #endif
+
     float weatherData = textureLod(colortex0, sampleCoord, 0.0).w * 2.5 - 1.5;
     float bloomAmount = 0.2 * BLOOM_INTENSITY + 1.0 * step(weatherData, -0.3) + 0.6 * step(0.5, float(isEyeInWater)) + step(1.5, float(isEyeInWater));
     finalColor = (finalColor + bloomColor * bloomAmount) / (1.0 + bloomAmount * 0.5);
@@ -482,3 +487,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:0 */
+
+#define ABZA_NAN_PASS 26
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer0)
+#include "/abza/NanDebugMain.glsl"

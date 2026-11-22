@@ -30,7 +30,7 @@ in float distortFixValue;
 #include "/libs/Uniform.glsl"
 #include "/libs/Common.glsl"
 
-const int shadowMapResolution = 1024; // [64 128 256 512 1024 2048 4096 8192 16384]
+const int shadowMapResolution = 2048; // [64 128 256 512 1024 2048 4096 8192 16384]
 const float realShadowMapResolution = shadowMapResolution * MC_SHADOW_QUALITY;
 
 float waterCaustic(vec3 mcPos, vec3 lightDir) {
@@ -64,7 +64,7 @@ float waterCaustic(vec3 mcPos, vec3 lightDir) {
 }
 
 vec3 shadowCoordToWorldPos(vec3 shadowCoord) {
-    float clipLengthInv = inversesqrt(dot(shadowCoord.xy, shadowCoord.xy));
+    float clipLengthInv = inversesqrt(max(dot(shadowCoord.xy, shadowCoord.xy), 1e-20));
     float shadowDistortion = pow(distortionStrength + 1.0, 1.0 / clipLengthInv) / distortionStrength - 1.0 / distortionStrength;
     shadowCoord.xy *= shadowDistortion * clipLengthInv;
 

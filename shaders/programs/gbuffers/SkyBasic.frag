@@ -16,6 +16,8 @@
 //  Gbuffer for stars and ignored sky overlay (skybasic)
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 gbufferData0;
 layout(location = 1) out vec4 starData;
 
@@ -38,3 +40,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:01 */
+
+#define ABZA_NAN_PASS 0
+#define ABZA_NAN_OUTPUTS abzaNanBad(gbufferData0) || abzaNanBad(starData)
+#include "/abza/NanDebugMain.glsl"

@@ -12,20 +12,20 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 | Forge | 47 |
 | Oculus | 1.8.0, with Embeddium |
 | Distant Horizons | Optional, tested with 3.3.2 |
-| [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) | Optional, 1.0.0: mirrors in water and glass, dry ground under glass roofs |
+| [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) | Optional, 2.0.0: mirrors in water and glass, steady ambient occlusion, the Auto-PBR Material Engine |
 
 ## Presets
 
-"Profile" on the main shader screen sets every performance option at once. Any option can still be changed by hand afterwards. "ABZA modpack", on the same screen, makes water on Earth reflect the modpack's large square sun. Standard turns it off, ABZA turns it on, and the other presets leave it as it is. Every preset uses Steady exposure.
+"Profile" on the main shader screen sets every performance option at once, each preset adding features to the one before. Exposure, TAA style, motion blur and the other looks stay as you set them, and any option can still be changed by hand afterwards. "ABZA modpack", on the same screen, makes water on Earth reflect the modpack's large square sun; only the ABZA preset turns it on.
 
 | Preset | What it sets |
 |---|---|
-| Potato | Every costly effect off or at its lowest; a 256-pixel shadow map out to 16 blocks, no mob shadows |
-| Standard (default) | The balanced preset the pack is tuned at: 1024-pixel shadows out to 80 blocks, reflections, clouds, light shafts, ambient occlusion, Steady exposure |
-| ABZA | Standard with "ABZA modpack" on |
-| High | Standard with 2048-pixel shadows, sharper ground textures, depth of field and underwater caustics |
-| Ultra | Standard with 4096-pixel shadows, coloured shadows from glass, cloud shadows, underwater caustics, depth of field, reflections on every surface that isn't fully rough, and sharper ground textures |
-| Max | Ultra with ray-traced bounce light (4 rays per pixel) |
+| Low | Realistic clouds with the high cloud layer, sharp shadows from a 1024-pixel map (your own shadow, not mobs'); no reflections, ambient occlusion, light shafts, fog or puddles |
+| Medium | Low plus ambient occlusion, light shafts and volumetric fog, underwater caustics, rain puddles and ripples, 2x texture filtering |
+| High (default) | Medium plus reflections, soft, contact, coloured and cloud shadows, depth of field and a 2048-pixel shadow map |
+| Ultra | High plus mob shadows, a 4096-pixel shadow map and 4x texture filtering; with Shaders Companion, its mirror view |
+| ABZA | High with "ABZA modpack" on |
+| Max | Only in Shaders Companion's copy of the pack: Ultra plus the Auto-PBR Material Engine, four mirror planes and every pixel tracing its own rough reflection |
 
 ## Gallery
 
@@ -46,11 +46,12 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 
 - **Ad Astra's sky:** the sun, moon and planets Ad Astra draws are the visible ones, and the shader's light, shadows and light shafts come from that same sun. Water reflects the sun's square shape. Ad Astra's coloured stars keep their colours, and on airless worlds they stay visible by day.
 - **Planet fog** in each biome's own fog colour, from the ground to the horizon, Distant Horizons terrain included.
-- **Exposure modes** (Post processing > Exposure): Steady (the default) follows the time of day, the weather and the world, never where you look, and "Night lift" sets how much it brightens nights and caves; Metered (Sundial's own) follows the brightness on screen; Off keeps one exposure per world. Dark worlds stay dark in every mode.
+- **Exposure modes** (Post processing): Steady (the default) follows the time of day, the weather and the world, never where you look, and "Night lift" sets how much it brightens nights and caves; Metered (Sundial's own) follows the brightness on screen; Off keeps one exposure per world. Dark worlds stay dark in every mode.
 - **Glowing ores,** vanilla and modded: only the ore-coloured pixels glow.
-- **Shading where blocks meet:** crease shading on top of screen-space ambient occlusion, and vanilla's block corner shading. Ambient occlusion and ray-traced bounce light each have a switch (Lighting > Ray tracing).
-- **Mirrors with Shaders Companion:** with the [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) mod installed, water and stained or tinted glass show yourself, the mobs and buildings behind you and Distant Horizons' far terrain, with the pack's own light and shadows. Water and glass seen in a mirror look like the water and glass around you, and in rain the ground under glass roofs stays dry. Without the mod, reflections show what is on screen. The mod installs its own copy of this pack as `ABZA Shader.zip` with these options on; in this download they are off (Reflection). Indoors, reflections nothing can reach show the room's own light instead of black. The mirror view is very experimental and may have issues; "Shaders Companion mirror view" (Reflection) turns it off.
-- **Thin glass:** glass bends what is behind it only by its surface detail, like a window pane, so a room seen through a window stays in place ("Thin glass", Texture).
+- **Shading where blocks meet:** crease shading on top of screen-space ambient occlusion, and vanilla's block corner shading. Ambient occlusion and ray-traced bounce light each have a switch (Lighting).
+- **Steady rough reflections:** reflections on rough metal, polished stone and wet ground are averaged over frames, so they don't crawl with grain while you walk; "Rough reflection rays" (Reflections) traces them on part of the screen each frame.
+- **With Shaders Companion:** with the [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) mod installed, water and stained or tinted glass work as mirrors (up to four at once) that show yourself, the mobs and buildings behind you and Distant Horizons' far terrain, with the pack's own light and shadows. Other shiny surfaces reflect what is off screen, lamps' glow included. Ambient occlusion comes from the mod's copy of the blocks around you, so it doesn't change with the view; the Auto-PBR Material Engine gives blocks and items without PBR maps their material; held items can reflect the world; in rain the ground under glass roofs stays dry. Without the mod, reflections show what is on screen. The mod installs its own copy of this pack as `ABZA Shader.zip` with these options on and a Max preset; in this download they are off (Shaders Companion screen). Indoors, reflections nothing can reach show the room's own light instead of black.
+- **Thin glass:** glass bends what is behind it only by its surface detail, like a window pane, so a room seen through a window stays in place ("Thin glass", Water and glass).
 - **Sunshine sheen:** a soft sunlit highlight on ground and grass, plants that glow when lit from behind, and darker shade.
 - **Speed:** clouds and light shafts are computed at half resolution and smoothed over frames, reflections reuse the clouds already on screen, and Umbra skips its shadow pass. Costly settings go much lower than in Sundial, with separate switches for entity, player and block-entity shadows.
 - **Mod fixes:** no ghost rings when aiming TaCZ optics, no mirror glare on held glass, and Distant Horizons blocks glow by their light level.

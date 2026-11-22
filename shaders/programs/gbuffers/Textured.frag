@@ -16,6 +16,8 @@
 //  Gbuffer for particles, entities and block entities
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 gbufferData0;
 layout(location = 1) out vec4 gbufferData1;
 layout(location = 2) out vec4 gbufferData2;
@@ -42,6 +44,22 @@ noperspective in vec4 coordRange;
 #include "/libs/Parallax.glsl"
 #include "/abza/Entities.glsl"
 #include "/abza/RainCover.glsl"
+#ifdef END_PORTAL
+    // Block entities (gbuffers_block) take their block's material class: blockEntityId is the block state's id
+    #include "/abza/MaterialClass.glsl"
+#endif
+#if defined HAND && defined COMPANION_HELD_ITEMS
+    // Held items take their item's material class (abza/HeldItems.glsl)
+    #define ABZA_HELD_ITEM_CLASSES
+    #include "/abza/HeldItems.glsl"
+#endif
+#ifdef COMPANION_ENTITY_MATERIALS
+    #if defined ENTITIES && !defined EMISSIVE
+        // Entities, armour and items drawn in the world take their material classes (abza/EntityMaterials.glsl)
+        #define ABZA_ENTITY_CLASSES
+        #include "/abza/EntityMaterials.glsl"
+    #endif
+#endif
 
 #ifdef ENTITY_VERTEX_TBN
     in mat3 vertexTbnMatrix;
@@ -271,6 +289,21 @@ void main() {
         #ifdef MC_SPECULAR_MAP
             vec4 specularData = texture(specular, texcoord);
             SPECULAR_FORMAT(rawData, specularData);
+            #ifdef END_PORTAL
+                abzaMaterialClass(rawData, blockEntityId, specularData);
+            #endif
+            #ifdef ABZA_HELD_ITEM_CLASSES
+                abzaHeldItemClass(rawData, specularData);
+            #endif
+            #ifdef ABZA_ENTITY_CLASSES
+                abzaEntityClass(rawData, specularData);
+            #endif
+        #elif defined END_PORTAL
+            abzaMaterialClass(rawData, blockEntityId, vec4(0.0));
+        #elif defined ABZA_HELD_ITEM_CLASSES
+            abzaHeldItemClass(rawData, vec4(0.0));
+        #elif defined ABZA_ENTITY_CLASSES
+            abzaEntityClass(rawData, vec4(0.0));
         #endif
 
         #if defined TRANSPARENT && !defined HAND
@@ -384,9 +417,10 @@ void main() {
                 float NdotV = dot(rawData.normal, viewDir) * inversesqrt(dot(rawData.normal, rawData.normal));
                 vec3 edgeNormal = rawData.normal - viewDir * NdotV;
                 float curveStart = dot(viewDir, rawData.geoNormal);
+                curveStart += float(curveStart == 0.0) * 1e-6;
                 float weight = clamp(curveStart - curveStart * exp(NdotV / curveStart - 1.0), 0.0, 1.0);
                 weight = max(NdotV, curveStart) - weight;
-                rawData.normal = viewDir * weight + edgeNormal * max(0.0, inversesqrt(dot(edgeNormal, edgeNormal) / (1.0 - weight * weight)));
+                rawData.normal = viewDir * weight + edgeNormal * sqrt(max(1.0 - weight * weight, 0.0) / max(dot(edgeNormal, edgeNormal), 1e-20));
             }
         }
         #ifdef IRIS_INLINE_GLINT
@@ -404,3 +438,11 @@ void main() {
 }
 
 /* DRAWBUFFERS:012 */
+
+#if defined TRANSPARENT || defined PARTICLE
+    #define ABZA_NAN_PASS 9
+#else
+    #define ABZA_NAN_PASS 1
+#endif
+#define ABZA_NAN_OUTPUTS abzaNanBad(gbufferData0) || abzaNanBad(gbufferData1) || abzaNanBad(gbufferData2)
+#include "/abza/NanDebugMain.glsl"

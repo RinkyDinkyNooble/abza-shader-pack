@@ -16,6 +16,8 @@
 //  Gbuffer for Distant Horizons solid terrain
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 gbufferData0;
 layout(location = 1) out vec4 gbufferData1;
 layout(location = 2) out vec4 gbufferData2;
@@ -23,6 +25,7 @@ layout(location = 2) out vec4 gbufferData2;
 in vec3 color;
 in vec3 viewPos;
 flat in vec3 blockData;
+flat in vec3 faceNormal;
 
 #include "/settings/GlobalSettings.glsl"
 #include "/libs/Uniform.glsl"
@@ -55,7 +58,9 @@ void main() {
     vec3 dPosDX = dFdx(viewPos);
     vec3 dPosDY = dFdy(viewPos);
     vec3 viewNormal = cross(dPosDX, dPosDY);
-    viewNormal *= signMul(inversesqrt(dot(viewNormal, viewNormal)), -dot(viewNormal, viewPos));
+    float viewNormalLength2 = dot(viewNormal, viewNormal);
+    // A face seen exactly edge-on has no area to take a normal from: its own normal instead
+    viewNormal = viewNormalLength2 > 0.0 ? viewNormal * signMul(inversesqrt(viewNormalLength2), -dot(viewNormal, viewPos)) : faceNormal;
 
     rawData.albedo = albedo;
     rawData.lightmap = blockData.xy;
@@ -79,9 +84,9 @@ void main() {
         #if RAIN_PUDDLE == 1
             wetStrength = (1.0 - rawData.metalness) * clamp(worldNormal.y * 10.0 - 0.1, 0.0, 1.0) * outdoor * rainyStrength;
         #elif RAIN_PUDDLE == 2
-            wetStrength = groundWetStrength(mcPos, worldNormal.y, 0.0, 0.0, outdoor);
+            wetStrength = groundWetStrength(mcPos, worldNormal.y, rawData.metalness, 0.0, outdoor);
         #endif
-        rawData.smoothness = wetStrength;
+        rawData.smoothness += (1.0 - rawData.smoothness) * wetStrength;
 
         #ifdef RAIN_RIPPLES
             vec3 tangent = normalize(cross(viewNormal, mat3(gbufferModelView) * vec3(1.0)));
@@ -98,9 +103,10 @@ void main() {
             float NdotV = dot(rawData.normal, viewDir);
             vec3 edgeNormal = rawData.normal - viewDir * NdotV;
             float curveStart = dot(viewDir, tbnMatrix[2]);
+            curveStart += float(curveStart == 0.0) * 1e-6;
             float weight = clamp(curveStart - curveStart * exp(NdotV / curveStart - 1.0), 0.0, 1.0);
             weight = max(NdotV, curveStart) - weight;
-            rawData.normal = viewDir * weight + edgeNormal * max(0.0, inversesqrt(dot(edgeNormal, edgeNormal) / (1.0 - weight * weight)));
+            rawData.normal = viewDir * weight + edgeNormal * sqrt(max(1.0 - weight * weight, 0.0) / max(dot(edgeNormal, edgeNormal), 1e-20));
         #endif
     }
 
@@ -108,3 +114,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:012 */
+
+#define ABZA_NAN_PASS 2
+#define ABZA_NAN_OUTPUTS abzaNanBad(gbufferData0) || abzaNanBad(gbufferData1) || abzaNanBad(gbufferData2)
+#include "/abza/NanDebugMain.glsl"

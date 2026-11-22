@@ -27,7 +27,7 @@
     vec3 abzaOutdoorScene(vec3 sun, vec3 sky, float lightHeight, float weather) {
         const float skyShare = 0.35;
 
-        float facing = 0.6 * lightHeight + 0.4 / PI * sqrt(1.0 - lightHeight * lightHeight);
+        float facing = 0.6 * lightHeight + 0.4 / PI * sqrt(max(1.0 - lightHeight * lightHeight, 0.0));
         vec3 direct = sun * (0.7 * facing * 9.5 * SUNLIGHT_BRIGHTNESS * (1.0 - sqrt(weather)));
         vec3 ambient =
             (sky * 0.8 + sun * 2.0 * ABZA_AMBIENT * (SHADE_FILL / ABZA_SCENE_SHADE_FILL) * SUNLIGHT_BRIGHTNESS * (1.0 - (0.75 + 0.25 * float(CLOUD_TYPE != 2)) * weather)) *
@@ -49,7 +49,8 @@
 
     // Scene brightness in the units of the metered brightness, without reading the screen.
     // Steady: the outdoor scene now; locally it is scaled by the sky light at the player, plus a share of the block light there.
-    //   STEADY_LOCAL_ADAPTATION blends the two in log space: 0 uses the outdoor scene only, 1 the local one.
+    //   STEADY_LOCAL_ADAPTATION blends the two in log space where the sky light at the player is full: 0 uses the outdoor
+    //   scene only, 1 the local one. With less sky light the blend moves toward the local scene, which alone counts without it.
     //   Below an eighth of the noon brightness (about the light at sunset; worlds with a fixed time: of their outdoor scene),
     //   the result falls in log space at STEADY_NIGHT_LIFT times the rate, so darker scenes get that share of the exposure lift.
     // Off: the noon brightness, so it never changes.
@@ -72,7 +73,10 @@
 
             float outdoorScene = abzaSceneBrightness(outdoor + basic);
             float localScene = abzaSceneBrightness(outdoor * skyLight + indoor + basic);
-            float brightness = exp2(mix(log2(outdoorScene), log2(localScene), STEADY_LOCAL_ADAPTATION));
+            // The outdoor scene weighs only as much as its light reaches the player: closed rooms and caves without
+            // sky light follow their own light alone, at any time of day
+            float adaptation = mix(1.0, STEADY_LOCAL_ADAPTATION, skyLight);
+            float brightness = exp2(mix(log2(outdoorScene), log2(localScene), adaptation));
             #if ABZA_FIXED_TIME == 0
                 float reference = 0.125 * abzaNoonBrightness();
             #else

@@ -1,4 +1,4 @@
-const int shadowMapResolution = 1024; // [64 128 256 512 1024 2048 4096 8192 16384]
+const int shadowMapResolution = 2048; // [64 128 256 512 1024 2048 4096 8192 16384]
 const float realShadowMapResolution = shadowMapResolution * MC_SHADOW_QUALITY;
 
 #if defined SHADOW_AND_SKY || defined END_FLASH
@@ -9,8 +9,8 @@ const float realShadowMapResolution = shadowMapResolution * MC_SHADOW_QUALITY;
     }
 
     vec3 distortShadowCoord(vec3 shadowCoord) {
-        float clipLengthInv = inversesqrt(dot(shadowCoord.xy, shadowCoord.xy));
-        float shadowDistortion = log(distortionStrength / clipLengthInv + 1.0) / log(distortionStrength + 1.0) * 0.25;
+        float clipLengthInv = inversesqrt(max(dot(shadowCoord.xy, shadowCoord.xy), 1e-20));
+        float shadowDistortion = log2(distortionStrength / clipLengthInv + 1.0) / log2(distortionStrength + 1.0) * 0.25;
         shadowCoord.xy *= clipLengthInv * shadowDistortion;
         shadowCoord.xy = shadowCoord.xy + 0.75;
         return shadowCoord;
@@ -62,8 +62,8 @@ const float realShadowMapResolution = shadowMapResolution * MC_SHADOW_QUALITY;
         subsurfaceScattering *= clamp(SUBSERFACE_SCATTERING_STRENTGH * 1e+10, 0.0, 1.0);
         if (weatherStrength < 0.999) {
             vec3 sssShadowCoord = worldPosToShadowCoordNoDistort(worldPos);
-            float normalFactor = clamp(pow(NdotL, pow2(1.0 - min(0.3, smoothness))), 0.0, 1.0);
-            worldPos += geoNormal * ((length(worldPos) * 2e-3 + 2e-2) * (1.0 + sqrt(1.0 - NdotL))) * 4096.0 / realShadowMapResolution;
+            float normalFactor = clamp(pow(max(NdotL, 0.0), pow2(1.0 - min(0.3, smoothness))), 0.0, 1.0);
+            worldPos += geoNormal * ((length(worldPos) * 2e-3 + 2e-2) * (1.0 + sqrt(max(1.0 - NdotL, 0.0)))) * 4096.0 / realShadowMapResolution;
             vec3 shadowCoord = worldPosToShadowCoord(worldPos);
             NdotL = abs(dot(geoNormal, shadowDirection));
             NdotL = NdotL + (1.0 - NdotL) * clamp(porosity * 255.0 / 191.0 - 64.0 / 191.0, 0.0, 1.0);

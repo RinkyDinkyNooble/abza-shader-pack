@@ -16,6 +16,8 @@
 //  Bloom stage 3: blur in y axis
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 texBuffer4;
 
 in vec2 texcoord;
@@ -51,3 +53,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:4 */
+
+#define ABZA_NAN_PASS 24
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer4)
+#include "/abza/NanDebugMain.glsl"

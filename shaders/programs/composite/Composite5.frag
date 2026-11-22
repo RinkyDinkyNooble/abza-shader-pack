@@ -18,6 +18,8 @@
 
 #extension GL_ARB_gpu_shader5 : enable
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 texBuffer0;
 layout(location = 1) out vec4 texBuffer3;
 
@@ -42,6 +44,7 @@ in vec2 texcoord;
 #include "/libs/Atmosphere.glsl"
 #include "/libs/Cloud.glsl"
 #include "/libs/GbufferData.glsl"
+#include "/abza/MetalTint.glsl"
 #include "/libs/Shadow.glsl"
 #include "/abza/WaterBehind.glsl"
 
@@ -123,7 +126,11 @@ void main() {
         vec3 stainedColor = vec3(0.0);
         if (isTargetNotParticle) {
             stainedColor += gbufferData.smoothness * gbufferData.smoothness;
-            float refractionStrength = REFRACTION_STRENGTH * 4e-2 * clamp((1.0 - waterViewDepthNoLimit * worldDistanceInv) / (waterViewDepthNoLimit * worldDistanceInv + worldDistanceInv), 0.0, 1.0);
+            #ifdef DEPTH_RELATIVE_REFRACTION
+                float refractionStrength = REFRACTION_STRENGTH * 4e-2 * (1.0 - waterViewDepthNoLimit * worldDistanceInv) * (1.0 + float(isTargetWater));
+            #else
+                float refractionStrength = REFRACTION_STRENGTH * 4e-2 * clamp((1.0 - waterViewDepthNoLimit * worldDistanceInv) / (waterViewDepthNoLimit * worldDistanceInv + worldDistanceInv), 0.0, 1.0);
+            #endif
 
             float roughness = 1.0 - gbufferData.smoothness;
             vec2 blueNoise = textureLod(noisetex, texcoord * screenSize / 64.0, 0.0).xy;
@@ -217,7 +224,7 @@ void main() {
         #if WATER_TYPE == 0
             waterStain = float(!isTargetWater);
         #endif
-        stainedColor *= log2(1.0 - fresnel(LdotH, f0));
+        stainedColor *= log2(max(1.0 - fresnel(LdotH, f0), 1e-30));
         stainedColor += sqrt(gbufferData.albedo.w * 1.5) * log2(clamp(gbufferData.albedo.rgb + 1e-5, 0.0, 1.0) * (1.0 - 0.5 * gbufferData.albedo.w * gbufferData.albedo.w)) * waterStain;
         stainedColor = exp2(stainedColor);
 
@@ -274,7 +281,8 @@ void main() {
     }
     solidColor.w = gbufferData.parallaxOffset - float(gbufferData.materialID == MAT_END_PORTAL);
     vec4 reflectionData = texelFetch(colortex4, texel, 0);
-    solidColor.rgb += reflectionData.rgb * reflectionWeight;
+    // Composite0 divided a metal's albedo tint out before the reflection filter
+    solidColor.rgb += reflectionData.rgb * abzaMetalTint(gbufferData) * reflectionWeight;
     reflectionData.rgb = vec3(0.0, 0.0, gbufferData.materialID / 255.0 + 0.1 / 255.0);
 
     waterDepth -= float(waterDepth > 1.0);
@@ -461,3 +469,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:03 */
+
+#define ABZA_NAN_PASS 17
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer0) || abzaNanBad(texBuffer3)
+#include "/abza/NanDebugMain.glsl"

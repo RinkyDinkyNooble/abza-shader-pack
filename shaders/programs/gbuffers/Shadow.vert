@@ -49,7 +49,7 @@ out float distortFixValue;
 #define ABZA_VOXEL_WRITE
 #include "/abza/Voxels.glsl"
 
-const int shadowMapResolution = 1024; // [64 128 256 512 1024 2048 4096 8192 16384]
+const int shadowMapResolution = 2048; // [64 128 256 512 1024 2048 4096 8192 16384]
 const float realShadowMapResolution = shadowMapResolution * MC_SHADOW_QUALITY;
 
 void main() {
@@ -134,8 +134,8 @@ void main() {
         shadowOffset.x = -isTransparent;
 
         gl_Position = gl_ProjectionMatrix * viewPos;
-        float clipLengthInv = inversesqrt(dot(gl_Position.xy, gl_Position.xy));
-        float shadowDistortion = log(distortionStrength / clipLengthInv + 1.0) / log(distortionStrength + 1.0) * 0.5;
+        float clipLengthInv = inversesqrt(max(dot(gl_Position.xy, gl_Position.xy), 1e-20));
+        float shadowDistortion = log2(distortionStrength / clipLengthInv + 1.0) / log2(distortionStrength + 1.0) * 0.5;
         gl_Position.xy *= max(0.0, clipLengthInv * shadowDistortion);
         gl_Position.xy = gl_Position.xy + 0.5 + shadowOffset;
         gl_Position.z *= 0.2;

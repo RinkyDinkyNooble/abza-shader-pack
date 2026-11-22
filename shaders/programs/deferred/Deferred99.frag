@@ -16,6 +16,8 @@
 //  Voxy transparent data blit
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 texBuffer0;
 layout(location = 1) out vec4 texBuffer1;
 layout(location = 2) out vec4 texBuffer2;
@@ -36,3 +38,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:012 */
+
+#define ABZA_NAN_PASS 8
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer0) || abzaNanBad(texBuffer1) || abzaNanBad(texBuffer2)
+#include "/abza/NanDebugMain.glsl"

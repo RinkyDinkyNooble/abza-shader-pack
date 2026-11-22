@@ -16,6 +16,8 @@
 //  DoF stage 3: sample
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 texBuffer3;
 
 in vec2 texcoord;
@@ -126,3 +128,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:3 */
+
+#define ABZA_NAN_PASS 20
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer3)
+#include "/abza/NanDebugMain.glsl"

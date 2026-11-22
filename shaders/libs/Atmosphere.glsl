@@ -12,8 +12,19 @@ const float atmosphereHeight = earthRadius + 100000.0;
 const float sunRadius = 0.02;
 const vec2 earthScaledHeight = 1.44269502 * earthRadius / scaledHeight;
 
+#ifdef SMOOTH_HORIZON
+    vec3 horizonSampleDirection(vec3 worldDir, float planetHeight) {
+        float horizonHeight = clamp((planetHeight - earthRadius) / atmosphereThickness * 3.0, 0.0, 1.0);
+        worldDir.y *= clamp(float(worldDir.y > 0.0) + 2.0 * horizonHeight - horizonHeight * horizonHeight, 0.0, 1.0);
+        return normalize(worldDir);
+    }
+#endif
+
 vec4 planetIntersectionData(vec3 worldPos, vec3 worldDir) {
     worldPos.y += max(300.0 + earthRadius, cameraPosition.y + WORLD_BASIC_HEIGHT + earthRadius);
+    #ifdef SMOOTH_HORIZON
+        worldDir = horizonSampleDirection(worldDir, worldPos.y);
+    #endif
     float R2 = dot(worldPos, worldPos);
     float RdotP = dot(worldPos, worldDir);
     float RdotP2 = RdotP * RdotP - R2;
@@ -71,6 +82,10 @@ vec3 singleAtmosphereScattering(
         float d = deltaAtmos * inversesqrt(deltaAtmos);
         float atmosphereLength = -b + d;
         if (atmosphereLength > 0.0) {
+            vec3 sampleDirection = worldDir;
+            #ifdef SMOOTH_HORIZON
+                sampleDirection = horizonSampleDirection(worldDir, originPos.y);
+            #endif
             float groundLength = intersectionData.z;
             float originHeight2 = dot(originPos, originPos);
             groundLength = max(groundLength, uintBitsToFloat(floatBitsToUint(-sqrt(originHeight2 - earthRadius * earthRadius)) ^ (floatBitsToUint(groundLength) & 0x80000000u)));
@@ -113,7 +128,7 @@ vec3 singleAtmosphereScattering(
 
             for (int i = 0; i < ATMOSPHERE_VIEW_SAMPLE; i++) {
                 stepLength += stepUnit;
-                samplePosition += worldDir * stepLength;
+                samplePosition += sampleDirection * stepLength;
                 float sampleHeight2 = dot(samplePosition, samplePosition);
 
                 float sampleHeightInv = inversesqrt(sampleHeight2);

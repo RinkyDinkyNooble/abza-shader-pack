@@ -18,6 +18,8 @@
 
 #extension GL_ARB_gpu_shader5 : enable
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 texBuffer3;
 layout(location = 1) out vec4 texBuffer4;
 layout(location = 2) out vec4 texBuffer5;
@@ -27,7 +29,7 @@ in float smoothCenterDepth;
 in vec2 texcoord;
 
 // Depth of field
-    // #define DEPTH_OF_FIELD
+    #define DEPTH_OF_FIELD
     #define FOCUS_MODE 0 // [0 1]
     // #define HAND_DOF
     #define COC_SPREAD_SAMPLES 10 // [2 3 4 5 6 7 8 9 10 12 14 16 18 20 22 25 30 35 40 45 50 60 70 80 90 100]
@@ -183,6 +185,7 @@ float getDepthConfidenceFactor(vec3 coord, vec3 velocity) {
     float prevDepth = getFarthestPrevDepth(prevCoord, prevNearestDepth);
     float depthDiffFactor = step(coord.z + velocity.z, prevDepth + 1e-3);
     depthDiffFactor *= abzaHandHistoryFactor(coord.z, prevNearestDepth);
+    depthDiffFactor *= abzaUncoveredFactor(coord.z, coord.z + velocity.z, prevNearestDepth);
     return depthDiffFactor;
 }
 
@@ -211,6 +214,10 @@ void main() {
     ivec2 texel = ivec2(gl_FragCoord.st);
     vec4 centerData = texelFetch(colortex3, texel, 0);
     float centerDepth = uintBitsToFloat(textureLod(colortex6, texcoord, 0.0).x);
+    // colortex6's first two texels hold the hand animation, not a depth
+    if (texel.y == 0 && texel.x < 2) {
+        centerDepth = focusDepth;
+    }
     float centerCoC = circleOfConfusionRadius(centerDepth, focusDepth);
     float sampleRadius = clamp(abs(centerCoC), 0.0, 1.0);
 
@@ -227,7 +234,7 @@ void main() {
         vec2 angle = vec2(cosNoise, sinNoise) * strength;
 
         for (int i = 0; i < COC_SPREAD_SAMPLES; i++) {
-            float radius = radius2 * inversesqrt(radius2);
+            float radius = sqrt(radius2);
             vec2 sampleCoord = texcoord + texelSize * radius * angle;
             float sampleDepth = uintBitsToFloat(textureLod(colortex6, sampleCoord, 0.0).x);
             angle = goldenRotate * angle;
@@ -256,6 +263,7 @@ void main() {
 
     float blendWeight = 1.0;
     float historyFrames = 0.0;
+    float distanceFactor = 1.0;
     #ifdef TAA
         float depthDiffFactor = getDepthConfidenceFactor(closest, velocity);
         if (depthDiffFactor < 0.5) {
@@ -268,11 +276,13 @@ void main() {
             }
         }
 
-        blendWeight *= TAA_HISTORY_WEIGHT - TAA_HISTORY_WEIGHT * min(0.8, 4.5 * pow(dot(velocity.xy, velocity.xy), 0.25)) * step(closest.z, 0.999999);
+        #if TAA_STYLE == 0
+            blendWeight *= TAA_HISTORY_WEIGHT - TAA_HISTORY_WEIGHT * min(0.8, 4.5 * pow(dot(velocity.xy, velocity.xy), 0.25)) * step(closest.z, 0.999999);
+        #endif
         blendWeight *= float(all(lessThan(floatBitsToUint(closest.st + velocity.st), floatBitsToUint(screenEdge))));
         blendWeight *= depthDiffFactor;
-        historyFrames = abzaHistoryFrames(closest.st + velocity.st, blendWeight);
-        blendWeight = min(blendWeight, historyFrames / (historyFrames + 1.0));
+        distanceFactor = abzaTaaDistanceFactor(closest);
+        blendWeight = abzaTaaHistoryWeight(closest.st + velocity.st, blendWeight, distanceFactor, historyFrames);
         #if SR_ENABLE
             blendWeight = 0.0;
         #endif
@@ -281,8 +291,12 @@ void main() {
     #if SR_ENABLE
         velocity.st *= upscaleRatio;
     #endif
-    texBuffer5 = vec4(velocity.st, 0.0, blendWeight);
-    texBuffer13 = historyFrames / 255.0;
+    texBuffer5 = vec4(velocity.st, distanceFactor, blendWeight);
+    texBuffer13 = historyFrames;
 }
 
 /* RENDERTARGETS: 3,4,5,13 */
+
+#define ABZA_NAN_PASS 19
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer3) || abzaNanBad(texBuffer4) || abzaNanBad(texBuffer5) || abzaNanBad(texBuffer13)
+#include "/abza/NanDebugMain.glsl"

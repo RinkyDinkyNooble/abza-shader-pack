@@ -15,20 +15,24 @@ vec2 clampCoordRange(vec2 coord, vec4 coordRange) {
 
 vec3 anisotropicOffsetLod(vec2 albedoTexSize, vec2 atlasTexelSize, vec2 texGradX, vec2 texGradY, vec2 quadSize) {
     //https://www.shadertoy.com/view/4lXfzn
-    mat2 qd = inverse(mat2(texGradX * albedoTexSize, texGradY * albedoTexSize));
-    qd = transpose(qd) * qd;
+    // The pixel's footprint in texels: J J^T has the squared major and minor axes as eigenvalues (no inverse, so a
+    // degenerate or isotropic footprint stays finite)
+    mat2 J = mat2(texGradX * albedoTexSize, texGradY * albedoTexSize);
+    mat2 M = J * transpose(J);
 
-    float d = determinant(qd);
-    float t = (qd[0][0] + qd[1][1]) * 0.5;
+    float t = (M[0][0] + M[1][1]) * 0.5;
+    float D = length(vec2((M[0][0] - M[1][1]) * 0.5, M[0][1]));
+    float major2 = t + D;
+    float minor2 = max(t - D, 0.0);
+    float l = max(0.0, 0.5 * log2(minor2));
 
-    float D = abs(t * t - d);
-    D = D * inversesqrt(D);
-    float V = t - D;
-    float v = t + D;
-    float l = max(0.0, -0.5 * log2(v));
-
-    vec2 A = vec2(qd[0][1], V - qd[0][0]);
-    A *= inversesqrt(V * dot(A, A)) / ANISOTROPIC_FILTERING_QUALITY;
+    // The major axis: whichever of the two eigenvector forms is longer (one vanishes on an axis-aligned footprint)
+    vec2 A = vec2(M[0][1], major2 - M[0][0]);
+    vec2 A2 = vec2(major2 - M[1][1], M[0][1]);
+    A = dot(A2, A2) > dot(A, A) ? A2 : A;
+    float lengthA2 = dot(A, A);
+    A = lengthA2 > 0.0 ? A * sqrt(major2 / lengthA2) : vec2(sqrt(major2), 0.0);
+    A /= ANISOTROPIC_FILTERING_QUALITY;
     A = signMul(max(vec2(0.0), abs(A)), A) * atlasTexelSize * quadSize;
     return vec3(A, l);
 }
@@ -187,7 +191,8 @@ mat3 calcTbnMatrix(vec2 dCoordDX, vec2 dCoordDY, vec3 position, out vec2 texture
                 ivec2 nextPixel = (floatBitsToInt(vec2(rayLength) - nextLength) >> 31) + 1;
                 nextLength += nextPixel * stepLength;
                 sampleTexel += nextPixel * dirSigned;
-                sampleTexel = sampleTexel % tileSize;
+                // Wrap within the tile: one step at a time, and % is undefined for negative operands
+                sampleTexel += tileSize * (ivec2(lessThan(sampleTexel, ivec2(0))) - ivec2(greaterThanEqual(sampleTexel, tileSize)));
                 sampleHeight = texelFetch(normals, sampleTexel + basicTexel, 0).a;
                 sampleHeight += clamp(1.0 - sampleHeight * 1e+10, 0.0, 1.0);
                 sampleHeight = 1.0 - sampleHeight;
@@ -225,7 +230,7 @@ mat3 calcTbnMatrix(vec2 dCoordDX, vec2 dCoordDY, vec3 position, out vec2 texture
             parallaxCoord.st = firstCoord;
             vec3 viewVector = viewPos * tbnMatrix;
             viewVector.xy *= textureScale;
-            vec3 stepSize = viewVector / (PARALLAX_QUALITY * abs(viewVector.z));
+            vec3 stepSize = viewVector / (PARALLAX_QUALITY * max(abs(viewVector.z), 1e-6));
             stepSize.xy *= PARALLAX_DEPTH * 0.2 * quadSize;
             float stepScale = 2.0 / PARALLAX_QUALITY;
 

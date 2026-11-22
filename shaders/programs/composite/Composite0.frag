@@ -19,6 +19,9 @@
 #extension GL_ARB_gpu_shader5 : enable
 #extension GL_ARB_shader_storage_buffer_object : enable
 #extension GL_ARB_shading_language_420pack : enable
+#extension GL_ARB_shader_image_load_store : enable
+
+#include "/abza/NanDebug.glsl"
 
 layout(location = 0) out vec4 texBuffer0;
 layout(location = 1) out vec4 texBuffer4;
@@ -44,9 +47,12 @@ in vec2 texcoord;
 #include "/libs/Atmosphere.glsl"
 #include "/libs/Cloud.glsl"
 #include "/libs/GbufferData.glsl"
+#include "/abza/MetalTint.glsl"
 #include "/abza/Sky.glsl"
 #include "/abza/Reflections.glsl"
 #include "/abza/OffscreenReflections.glsl"
+#include "/abza/ReflectionRate.glsl"
+#include "/abza/ReflectionAccumulation.glsl"
 
 #ifdef ABZA_PLANET_FOG
     #include "/abza/Fog.glsl"
@@ -83,7 +89,7 @@ vec3 IsotropicGGX(vec2 u, vec3 wi, float alpha, vec3 n, float NdotV, out float p
     wiStd *= t;
     NdotV *= t;
     //compute lower bound for scaling
-    float s = 1. + sqrt(1.0 - z2);
+    float s = 1. + sqrt(max(1.0 - z2, 0.0));
     float s2 = s * s;
     float k = (s2 - a2 * s2) / (s2 + a2 * z2);
     //calculate ratio of bounded and unbounded vndf
@@ -117,7 +123,9 @@ vec3 directionDistribution(vec2 noise, vec3 normal, vec3 viewDir, float roughnes
     #else
         vec3 rayDir = reflect(viewDir, normal);
         float distributionAngle = 2 * PI * noise.x;
-        vec3 distributionDir1 = normalize(cross(rayDir, viewDir));
+        vec3 distributionDir1 = cross(rayDir, viewDir);
+        // A surface facing the camera head-on reflects straight back: any direction across the ray will do
+        distributionDir1 = normalize(dot(distributionDir1, distributionDir1) > 0.0 ? distributionDir1 : cross(rayDir, abs(rayDir.x) < 0.9 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)));
         vec3 distributionDir2 = sin(distributionAngle) * cross(rayDir, distributionDir1);
         vec3 distributionDir = cos(distributionAngle) * distributionDir1 + distributionDir2 * NdotV;
         float distributionStrength = noise.y * roughness;
@@ -206,7 +214,15 @@ vec4 reflection(GbufferData gbufferData, float depth, vec3 f0, vec3 f82, float f
                 mirrorResult = abzaMirrorFirst(viewPos, gbufferData.geoNormal, rayDir, mirrorReflection);
                 mirrored = mirrorResult >= 0;
             }
-            int reflectionSteps = mirrorResult < 0 ? SCREEN_SPACE_REFLECTION_STEP : 0;
+            // Held items trace the cube and the lattice only: screen-space steps from the hand found the item itself
+            int reflectionSteps = mirrorResult < 0 && !(ABZA_HELD_OFFSCREEN && gbufferData.materialID == MAT_HAND) ? SCREEN_SPACE_REFLECTION_STEP : 0;
+            #if defined COMPANION_REFLECTIONS_ONLY && defined ABZA_COMPANION
+                // Every reflection from the mod's views: no screen-space steps while the mod's cube is there (held items
+                // keep theirs unless they trace the cube themselves)
+                if (abzaCompanionLinked() && gbufferData.materialID != MAT_HAND) {
+                    reflectionSteps = 0;
+                }
+            #endif
         #else
             const int reflectionSteps = SCREEN_SPACE_REFLECTION_STEP;
         #endif
@@ -268,7 +284,7 @@ vec4 reflection(GbufferData gbufferData, float depth, vec3 f0, vec3 f82, float f
                 openSky = mirrorResult == 0;
                 voxelReflection = mirrorReflection;
             }
-            else if (hitSky && gbufferData.materialID != MAT_HAND) {
+            else if (hitSky && (gbufferData.materialID != MAT_HAND || ABZA_HELD_OFFSCREEN)) {
                 hitVoxel = abzaOffscreenReflection(viewPos, gbufferData.geoNormal, rayDir, voxelReflection, openSky);
             }
         #endif
@@ -427,7 +443,12 @@ void main() {
                 gbufferData.metalness = step(229.5 / 255.0, gbufferData.metalness);
             #endif
             float reflectionStrength = 1.0;
-            if (waterDepth < solidDepth) {
+            // Shaders Companion picks mirror planes and draws their views from water and translucent blocks only. An
+            // opaque surface lying in a chosen plane (a metal ceiling around glass panels, with material classes or a
+            // PBR resource pack) would take the mirror view where the mod drew it, the cube elsewhere, and all of it
+            // would switch whenever the plane is chosen again: it keeps screen-space and cube reflections instead
+            bool translucentFront = waterDepth < solidDepth;
+            if (translucentFront) {
                 // Negative F0 marks ray shoot from water to air
                 if (gbufferData.materialID == MAT_WATER) {
                     f0 = vec3(0.02 - 0.04 * float(isEyeInWater == 1));
@@ -448,10 +469,23 @@ void main() {
                 }
             }
 
+            #if ROUGH_REFLECTION_RATE > 1
+                // Rough and faint reflections: only some tiles trace them each frame, in turn (abza/ReflectionRate.glsl)
+                bool leftToTracer = false;
+                if (reflectionStrength > 1e-5 && !translucentFront) {
+                    float NdotV = clamp(dot(-normalize(screenToViewPos(texcoord, solidDepth)), gbufferData.normal), 0.0, 1.0);
+                    vec3 sharedF0 = mix(f0, gbufferData.albedo.rgb, gbufferData.metalness);
+                    leftToTracer = abzaReflectionLeftToTracer(texel, gbufferData,
+                        abzaReflectionShareable(gbufferData.smoothness, reflectionStrength, sharedF0, f82, NdotV));
+                }
+                if (leftToTracer) {
+                    reflectionColor = vec4(0.0, 0.0, 0.0, ABZA_REFLECTION_SHARED);
+                } else
+            #endif
             if (reflectionStrength > 1e-5) {
                 f0 = signI(f0) * mix(abs(f0), gbufferData.albedo.rgb, gbufferData.metalness);
                 bool mirrored;
-                reflectionColor = reflection(gbufferData, waterDepth, f0, f82, reflectionStrength, true, mirrored);
+                reflectionColor = reflection(gbufferData, waterDepth, f0, f82, reflectionStrength, translucentFront, mirrored);
                 #ifdef ABZA_MIRROR
                     // A plane the mirror view has just taken over fades in from the reflection without it, so a
                     // surface doesn't jump from one to the other in a frame
@@ -461,11 +495,26 @@ void main() {
                         reflectionColor = mix(reflection(gbufferData, waterDepth, f0, f82, reflectionStrength, false, unused), reflectionColor, mirrorFade);
                     }
                 #endif
+                // Composite5 puts the tint back per pixel, after the filter
+                reflectionColor.rgb /= abzaMetalTint(gbufferData);
             }
+            #ifdef REFLECTION
+                // Averaged with the rays of the frames before (abza/ReflectionAccumulation.glsl)
+                if (reflectionStrength > 1e-5 && !translucentFront) {
+                    reflectionColor = abzaReflectionAccumulate(texel, gbufferData, solidDepth, reflectionColor);
+                }
+            #endif
         }
     #endif
 
+    #ifdef REFLECTION
+        abzaRAStoreNothing(texel);
+    #endif
     texBuffer4 = reflectionColor;
 }
 
 /* DRAWBUFFERS:04 */
+
+#define ABZA_NAN_PASS 11
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer0) || abzaNanBad(texBuffer4)
+#include "/abza/NanDebugMain.glsl"

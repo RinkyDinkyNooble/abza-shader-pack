@@ -189,6 +189,11 @@ vec4 abzaVolumetricLight(vec3 worldDir, float marchLength, float noise) {
     layout(rg16f) uniform image2D abzaVLInfo1;
 
     void abzaVLStore(ivec2 texel, vec4 light, vec4 info) {
+        #ifdef NAN_DEBUG_VIEW
+            if (abzaNanBad(light) || abzaNanBad(info)) {
+                abzaNanMark(texel * 2, 2, 16);
+            }
+        #endif
         if ((frameCounter & 1) == 0) {
             imageStore(abzaVL0, texel, light);
             imageStore(abzaVLInfo0, texel, info);

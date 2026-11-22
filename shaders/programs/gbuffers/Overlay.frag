@@ -16,6 +16,8 @@
 //  Gbuffer for armor glint, damaged block and sky textured
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 gbufferData0;
 
 in vec4 color;
@@ -40,3 +42,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:0 */
+
+#define ABZA_NAN_PASS 1
+#define ABZA_NAN_OUTPUTS abzaNanBad(gbufferData0)
+#include "/abza/NanDebugMain.glsl"

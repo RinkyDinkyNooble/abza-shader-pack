@@ -16,6 +16,8 @@
 //  Final sharpening
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 fragColor;
 
 in vec2 texcoord;
@@ -26,6 +28,7 @@ in vec2 texcoord;
 #define SHARPENING_LIMIT 0.18 // [0.0 0.02 0.04 0.06 0.08 0.1 0.12 0.14 0.16 0.18 0.2 0.22 0.24 0.26 0.28 0.3 0.32 0.34 0.36 0.38 0.4]
 
 #include "/libs/Uniform.glsl"
+#include "/abza/LatticeDebug.glsl"
 
 // Copyright (C) 2025 Advanced Micro Devices, Inc.
 //
@@ -59,6 +62,14 @@ float max3(float a, float b, float c) {
     return max(max(a, b), c);
 }
 
+// One channel's lobe from the ring's min and max. A ring all at 0 or all at 1 makes one limiter 0 / 0; that limiter is
+// left out, as an IEEE max leaves out a NaN
+float rcasLobe(float min4, float max4, float lowerLimiterMultiplier) {
+    float hitMin = min4 / max(4.0 * max4, 1e-6) * lowerLimiterMultiplier;
+    float hitMax = (1.0 - max4) / min(4.0 * min4 - 4.0, -1e-6);
+    return max4 <= 0.0 ? hitMax : (min4 >= 1.0 ? -hitMin : max(-hitMin, hitMax));
+}
+
 vec3 FidelityFX_RCAS(sampler2D colortex, vec2 coord, vec3 colorE, vec2 pixelSize) {
     // Algorithm uses minimal 3x3 pixel neighborhood.
     //    b
@@ -78,7 +89,7 @@ vec3 FidelityFX_RCAS(sampler2D colortex, vec2 coord, vec3 colorE, vec2 pixelSize
     // Noise detection.
     float nz = 0.25 * lumaB + 0.25 * lumaD + 0.25 * lumaF + 0.25 * lumaH - lumaE;
     float minLuma = min(min3(lumaB, lumaD, lumaF), lumaH);
-    nz = clamp(abs(nz) / (max3(max3(lumaB, lumaD, lumaE), lumaF, lumaH) - min(minLuma, lumaE)), 0.0, 1.0);
+    nz = clamp(abs(nz) / max(max3(max3(lumaB, lumaD, lumaE), lumaF, lumaH) - min(minLuma, lumaE), 1e-6), 0.0, 1.0);
     nz = float(-0.5) * nz + float(1.0);
     // Min and max of ring.
     float min4R = min(min3(colorB.r, colorD.r, colorF.r), colorH.r);
@@ -87,20 +98,14 @@ vec3 FidelityFX_RCAS(sampler2D colortex, vec2 coord, vec3 colorE, vec2 pixelSize
     float max4R = max(max3(colorB.r, colorD.r, colorF.r), colorH.r);
     float max4G = max(max3(colorB.g, colorD.g, colorF.g), colorH.g);
     float max4B = max(max3(colorB.b, colorD.b, colorF.b), colorH.b);
-    // Immediate constants for peak range.
-    vec2 peakC = vec2(1.0, -1.0 * 4.0);
     // Limiters, these need to be high precision RCPs.
-    float lowerLimiterMultiplier = clamp(lumaE / minLuma, 0.0, 1.0);
-    float hitMinR = min4R / (float(4.0) * max4R) * lowerLimiterMultiplier;
-    float hitMinG = min4G / (float(4.0) * max4G) * lowerLimiterMultiplier;
-    float hitMinB = min4B / (float(4.0) * max4B) * lowerLimiterMultiplier;
-    float hitMaxR = (peakC.x - max4R) / (float(4.0) * min4R + peakC.y);
-    float hitMaxG = (peakC.x - max4G) / (float(4.0) * min4G + peakC.y);
-    float hitMaxB = (peakC.x - max4B) / (float(4.0) * min4B + peakC.y);
-    float lobeR   = max(-hitMinR, hitMaxR);
-    float lobeG   = max(-hitMinG, hitMaxG);
-    float lobeB   = max(-hitMinB, hitMaxB);
+    float lowerLimiterMultiplier = clamp(lumaE / max(minLuma, 1e-6), 0.0, 1.0);
+    float lobeR   = rcasLobe(min4R, max4R, lowerLimiterMultiplier);
+    float lobeG   = rcasLobe(min4G, max4G, lowerLimiterMultiplier);
+    float lobeB   = rcasLobe(min4B, max4B, lowerLimiterMultiplier);
     float lobe    = max(-SHARPENING_LIMIT, min(max3(lobeR, lobeG, lobeB), 0.0)) * SHARPENING_SRENGTH;
+    // The result below divides by 4 * lobe + 1
+    lobe = max(lobe, -0.24);
     // Apply noise removal.
     #ifdef SHARPENING_DENOISE
         lobe *= nz;
@@ -114,5 +119,12 @@ void main() {
         vec2 pixelSize = 1.0 / vec2(textureSize(colortex0, 0));
         color = FidelityFX_RCAS(colortex0, texcoord, color, pixelSize);
     #endif
+    #if LATTICE_DEBUG_VIEW > 0
+        color = abzaLatticeDebug(color, texcoord);
+    #endif
     fragColor = vec4(color, 1.0);
 }
+
+#define ABZA_NAN_PASS 27
+#define ABZA_NAN_OUTPUTS abzaNanBad(fragColor)
+#include "/abza/NanDebugMain.glsl"

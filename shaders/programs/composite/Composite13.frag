@@ -16,6 +16,8 @@
 //  Bloom stage 4: final blur
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 texBuffer4;
 
 #include "/settings/GlobalSettings.glsl"
@@ -56,7 +58,7 @@ const float wetnessHalflife = 100.0;
 const float drynessHalflife = 100.0;
 const float eyeBrightnessHalflife = 1.0;
 
-const int shadowMapResolution = 1024; // [64 128 256 512 1024 2048 4096 8192 16384]
+const int shadowMapResolution = 2048; // [64 128 256 512 1024 2048 4096 8192 16384]
 const float shadowDistance = 80.0; // [16.0 32.0 48.0 64.0 80.0 120.0 160.0 200.0 240.0 280.0 320.0 360.0 400.0 480.0 560.0 640.0]
 const float entityShadowDistanceMul = 1.0; // [0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
 
@@ -88,3 +90,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:4 */
+
+#define ABZA_NAN_PASS 25
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer4)
+#include "/abza/NanDebugMain.glsl"

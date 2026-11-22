@@ -16,6 +16,8 @@
 //  Bloom stage 2: blur in x axis; Motion blur stage 2: small second blur
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 texBuffer3;
 layout(location = 1) out vec4 texBuffer4;
 
@@ -80,3 +82,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:34 */
+
+#define ABZA_NAN_PASS 23
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer3) || abzaNanBad(texBuffer4)
+#include "/abza/NanDebugMain.glsl"

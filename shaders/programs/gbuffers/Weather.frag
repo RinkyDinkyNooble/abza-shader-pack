@@ -18,6 +18,8 @@
 
 #extension GL_ARB_gpu_shader5 : enable
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 gbufferData4;
 
 in vec4 color;
@@ -64,3 +66,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:4 */
+
+#define ABZA_NAN_PASS 9
+#define ABZA_NAN_OUTPUTS abzaNanBad(gbufferData4)
+#include "/abza/NanDebugMain.glsl"

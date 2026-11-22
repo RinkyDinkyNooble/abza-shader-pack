@@ -19,6 +19,9 @@ uniform sampler2D colortex10;
 uniform sampler2D colortex11;
 uniform sampler2D colortex12;
 
+// Ambient occlusion from Shaders Companion's lattice in place of VBAO's (ABZA_LATTICE_AO), and the crease helpers
+#include "/abza/LatticeAO.glsl"
+
 // The visibility bitmask trace runs for ambient occlusion (VBAO and crease shading) or global illumination
 #if defined AMBIENT_OCCLUSION || defined VBGI
     #define ABZA_VB_TRACE
@@ -64,11 +67,6 @@ float abzaCrease(ivec2 texel, float isOriginNotHand, float blendWeight, float tr
     #else
         return 0.0;
     #endif
-}
-
-// Share of light kept in a crease; share scales the strength
-float abzaCreaseLight(float crease, float share) {
-    return pow(max(1.0 - crease, 1e-3), CREASE_SHADING_STRENGTH * share);
 }
 
 // Deferred11's lit colour (emission plus direct light) with the direct light shaded by CREASE_SHADING_DIRECT of the crease shading

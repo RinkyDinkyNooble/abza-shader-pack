@@ -16,6 +16,8 @@
 //  Reflection filter stage 2
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 texBuffer4;
 
 in vec2 texcoord;
@@ -34,7 +36,10 @@ void main() {
         depth += float(depth == 1.0) * (getLodDepthWater(texcoord) - 1.0);
     #endif
     if (abs(depth) < 1.0 && reflectionColor.w > 1e-6) {
-        reflectionColor = reflectionFilter(reflectionColor, texel, 2.5, false);
+        #ifndef COMPANION_DEBUG_VIEW
+            // (Not with "Reflection paths (debug)": blurring its colours together would make up paths)
+            reflectionColor = reflectionFilter(reflectionColor, texel, 2.5, false);
+        #endif
     } else {
         discard;
     }
@@ -42,3 +47,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:4 */
+
+#define ABZA_NAN_PASS 13
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer4)
+#include "/abza/NanDebugMain.glsl"

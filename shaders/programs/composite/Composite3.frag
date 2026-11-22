@@ -16,6 +16,8 @@
 //  Reflection filter stage 3, applying BRDF weight
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 texBuffer4;
 
 in vec2 texcoord;
@@ -54,7 +56,7 @@ void main() {
                 reflectionWeight *= 1.0 - diffuseWeight;
             }
 
-            #if REFLECTION_FILTER > 0
+            #if REFLECTION_FILTER > 0 && !defined COMPANION_DEBUG_VIEW
                 float originReflectionDepth = originData.w;
                 float originSmoothness = smoothness;
                 if (originSmoothness < 0.9975 && originReflectionDepth > 1e-5) {
@@ -104,3 +106,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:4 */
+
+#define ABZA_NAN_PASS 14
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer4)
+#include "/abza/NanDebugMain.glsl"

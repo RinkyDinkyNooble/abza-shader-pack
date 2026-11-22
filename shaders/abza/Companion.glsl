@@ -1,7 +1,7 @@
 //
 //  ABZA Shader: reflections from Shaders Companion, a companion mod that draws a low-resolution cube view of the
 //  terrain, entities and Distant Horizons LODs around the camera, and a mirror view, into textures (layout: the mod's
-//  API.md, cube protocol 2, mirror view protocol 2)
+//  API.md, cube protocol 2, mirror view protocol 3)
 //
 
 #ifndef ABZA_COMPANION_GLSL
@@ -16,7 +16,9 @@
 #endif
 #ifdef COMPANION_MIRROR
     #define ABZA_MIRROR
-    #define ABZA_MIRROR_PROTOCOL 2
+    #define ABZA_MIRROR_PROTOCOL 3
+    // Planes Shaders Companion mirrors at most (shaders.properties asks the mod for as many)
+    #define ABZA_MIRROR_PLANES COMPANION_MIRROR_PLANES
     #ifdef COMPANION_MIRROR_LIGHTING
         // The mirror view lit by deferred14 (abza/MirrorLightPass.frag) into colortex14
         #define ABZA_MIRROR_LIGHTING
@@ -30,6 +32,25 @@
 #if defined ABZA_COMPANION || defined ABZA_MIRROR
     #include "/abza/SurfaceLight.glsl"
     #include "/abza/RainCover.glsl"
+    // Blocks with a material class in the mod's views lit with their class's values
+    #include "/abza/ViewMaterial.glsl"
+    // Steady ambient occlusion for surfaces found off screen, as Deferred12 shades them on screen
+    #include "/abza/LatticeAO.glsl"
+
+    // What steady ambient occlusion leaves of a surface's ambient and direct light (abzaSurfaceLight's factors), for a
+    // surface point relative to the camera with a world-space normal: the lattice's occlusion and crease where it
+    // covers (no contact shade, see abzaLatticeOcclusionAt), 1 elsewhere or with the option off
+    void abzaLatticeShade(vec3 pos, vec3 normal, out float ambientShade, out float directShade) {
+        ambientShade = 1.0;
+        directShade = 1.0;
+        #ifdef ABZA_LATTICE_AO
+            float occlusion;
+            float crease;
+            float share = abzaLatticeOcclusionAt(pos, normal, false, occlusion, crease);
+            ambientShade = (1.0 - occlusion * share) * abzaCreaseLight(crease * share, 1.0);
+            directShade = abzaCreaseLight(crease * share, CREASE_SHADING_DIRECT);
+        #endif
+    }
     #ifdef ABZA_COMPANION_WATER
         #include "/abza/WaterSurface.glsl"
     #endif
@@ -125,11 +146,13 @@
         return (max(0, material) & 0x4800) == 0x4800 || material == 8198 || material == 8206 || material == 8207;
     }
 
-    // The lit colour of a surface the mod drew, from its albedo and data texels (the cube's or the mirror view's);
-    // surfacePos is the surface point, relative to this frame's camera, and rayDir the direction the reflection ray
-    // reached it in. The id field tells blocks (block.properties id + 1), entities (0x8000 + entity.properties id + 1)
-    // and Distant Horizons LODs (0xC000 + its block material) apart.
-    vec3 abzaCompanionShadeTexel(vec3 albedo, vec4 rawData, vec3 surfacePos, vec3 rayDir) {
+    // The lit colour of a surface the mod drew, from its albedo (alpha below 1 on water and glass) and data texels (the
+    // cube's or the mirror view's); surfacePos is the surface point, relative to this frame's camera, and rayDir the
+    // direction the reflection ray reached it in. The id field tells blocks (block.properties id + 1), entities
+    // (0x8000 + entity.properties id + 1) and Distant Horizons LODs (0xC000 + its block material) apart. Opaque blocks
+    // with a material class are lit with their class's values (abza/ViewMaterial.glsl).
+    vec3 abzaCompanionShadeTexel(vec4 albedoTexel, vec4 rawData, vec3 surfacePos, vec3 rayDir) {
+        vec3 albedo = albedoTexel.rgb;
         uvec3 data = uvec3(round(rawData.rgb * 65535.0));
         vec3 normal = abzaCompanionOctDecode(vec2(float(data.r >> 8u), float(data.r & 255u)) / 255.0);
         // Surfaces drawn on both sides (plants, panes) face the ray, as Terrain.frag turns them to the camera
@@ -158,7 +181,19 @@
         else {
             emissive = abzaCompanionEmission(albedo, int(data.b) - 1, blockLevel);
         }
-        return pow(albedo, vec3(2.2)) * (abzaSurfaceLight(blockLevel, skyLevel, surfacePos, normal, translucent) + emissive * PBR_BRIGHTNESS * PI);
+        vec3 linearAlbedo = pow(albedo, vec3(2.2));
+        float ambientShade;
+        float directShade;
+        abzaLatticeShade(surfacePos, normal, ambientShade, directShade);
+        #ifdef COMPANION_MATERIALS
+            // Opaque surfaces only: water and glass (alpha below 1) keep their own look
+            AbzaViewMaterial material;
+            if (albedoTexel.a > 0.999 && abzaViewMaterial(abzaViewTexelClass(data.b), linearAlbedo, material)) {
+                return abzaViewClassedLight(material, linearAlbedo, normal, rayDir, surfacePos, blockLevel, skyLevel, ambientShade, directShade) +
+                    linearAlbedo * emissive * PBR_BRIGHTNESS * PI;
+            }
+        #endif
+        return linearAlbedo * (abzaSurfaceLight(blockLevel, skyLevel, surfacePos, normal, translucent, ambientShade, directShade) + emissive * PBR_BRIGHTNESS * PI);
     }
 #endif
 
@@ -224,7 +259,7 @@
     // The lit colour of the cube's surface at an atlas coordinate; surfacePos is the surface point, relative to this
     // frame's camera, reached by a ray in direction rayDir
     vec3 abzaCompanionShade(vec2 coord, vec3 surfacePos, vec3 rayDir) {
-        return abzaCompanionShadeTexel(textureLod(scAlbedo, coord, 0.0).rgb, textureLod(scData, coord, 0.0), surfacePos, rayDir);
+        return abzaCompanionShadeTexel(textureLod(scAlbedo, coord, 0.0), textureLod(scData, coord, 0.0), surfacePos, rayDir);
     }
 
     // The point on the cube's surface seen along fromOrigin (a lookup's direction from its face's origin), relative to
@@ -233,21 +268,43 @@
         return p - fromOrigin + normalize(fromOrigin) * surface;
     }
 
+    // Where the cube shows a surface at a point relative to this frame's camera (within a quarter block, plus 3% of the
+    // distance for the texels' steps on surfaces seen at a grazing angle): its atlas coordinate and surface point; false
+    // where the point is hidden from the cube or not drawn
+    bool abzaCompanionSurfaceAt(vec3 p, out vec2 coord, out vec3 surfacePos) {
+        surfacePos = p;
+        float faceSize = texelFetch(scInfo, ivec2(0, 0), 0).z;
+        vec3 fromOrigin;
+        if (!abzaCompanionLookup(p, faceSize, fromOrigin, coord)) {
+            return false;
+        }
+        float surface = textureLod(scDistance, coord, 0.0).r;
+        if (surface <= 0.0 || abs(length(fromOrigin) - surface) > 0.25 + 0.03 * surface) {
+            return false;
+        }
+        surfacePos = abzaCompanionSurfacePoint(p, fromOrigin, surface);
+        return true;
+    }
+
     // Traces a ray from a point relative to the camera through the cube's distance map, in steps that grow with
     // distance, like screen-space reflection on a screen all around the camera. A sample is behind the cube's surface
     // when it is farther from the face's origin than the surface in its direction; a crossing within the step's length
     // is refined by halving and is a hit when the refined point lies on the surface, clear of the reflecting surface's
     // plane (planeNormal through worldPos). Past the march, far surfaces (distant terrain, Distant Horizons LODs) are
-    // read in the ray's direction and count where they lie past the marched part of the ray. Returns 1 on a hit (colour
-    // and distance travelled in color), 0 when the cube sees open sky in the ray's way, -1 where part of the cube hasn't
-    // been drawn yet or the ray's way is unknown.
-    int abzaCompanionReflection(vec3 worldPos, vec3 worldDir, vec3 planeNormal, out vec4 color) {
-        color = vec4(0.0);
+    // read in the ray's direction and count where they lie past the marched part of the ray. Returns 1 on a hit (its
+    // atlas coordinate, its surface point relative to this frame's camera, and the distance travelled; abzaCompanionShade
+    // lights it), 0 when the cube sees open sky in the ray's way, -1 where part of the cube hasn't been drawn yet or the
+    // ray's way is unknown.
+    int abzaCompanionTrace(vec3 worldPos, vec3 worldDir, vec3 planeNormal, out vec2 hitCoord, out vec3 hitPos, out float hitDistance) {
+        hitCoord = vec2(0.0);
+        hitPos = worldPos;
+        hitDistance = 0.0;
         float faceSize = texelFetch(scInfo, ivec2(0, 0), 0).z;
         float range = texelFetch(scInfo, ivec2(7, 0), 0).z;
         float stepLength = 0.15;
         float t = 0.05;
         float previousT = 0.0;
+        bool previousInFront = true;
         for (int i = 0; i < ABZA_COMPANION_STEPS; i++) {
             vec3 p = worldPos + worldDir * t;
             vec3 fromOrigin;
@@ -257,7 +314,11 @@
             }
             float surface = textureLod(scDistance, coord, 0.0).r;
             float behind = length(fromOrigin) - surface;
-            if (surface > 0.0 && behind > 0.0 && behind < stepLength * 1.5 + 0.02 * surface) {
+            bool inFront = surface <= 0.0 || behind <= 0.0;
+            // A crossing: behind the surface by less than a step, or by any amount after a sample in front of it (a
+            // surface seen at a grazing angle from the origin, such as a far floor or ceiling, lies far behind a sample
+            // just past it along the line of sight)
+            if (surface > 0.0 && behind > 0.0 && (previousInFront || behind < stepLength * 1.5 + 0.02 * surface)) {
                 float frontT = previousT;
                 float backT = t;
                 for (int j = 0; j < ABZA_COMPANION_REFINEMENTS; j++) {
@@ -272,13 +333,15 @@
                 }
                 // A real crossing refines onto the surface. Passing behind an object's silhouette (seen from the
                 // origin) refines onto the edge instead, where the surface jumps: no hit, keep tracing.
-                vec3 hitPos = worldPos + worldDir * backT;
-                abzaCompanionLookup(hitPos, faceSize, fromOrigin, coord);
+                vec3 crossing = worldPos + worldDir * backT;
+                abzaCompanionLookup(crossing, faceSize, fromOrigin, coord);
                 surface = textureLod(scDistance, coord, 0.0).r;
                 if (abs(length(fromOrigin) - surface) < stepLength * 0.25 + 0.1 + 0.01 * surface) {
-                    vec3 surfacePos = abzaCompanionSurfacePoint(hitPos, fromOrigin, surface);
+                    vec3 surfacePos = abzaCompanionSurfacePoint(crossing, fromOrigin, surface);
                     if (dot(surfacePos - worldPos, planeNormal) > ABZA_COMPANION_PLANE_MARGIN) {
-                        color = vec4(abzaCompanionShade(coord, surfacePos, worldDir), backT);
+                        hitCoord = coord;
+                        hitPos = surfacePos;
+                        hitDistance = backT;
                         return 1;
                     }
                 }
@@ -286,6 +349,7 @@
             if (length(p.xz) > range) {
                 break;
             }
+            previousInFront = inFront;
             previousT = t;
             t += stepLength;
             stepLength *= 1.12;
@@ -302,7 +366,9 @@
         vec3 surfacePos = abzaCompanionSurfacePoint(farPoint, fromOrigin, surface);
         if (surface > 0.0 && dot(surfacePos - worldPos, worldDir) > t) {
             if (dot(surfacePos - worldPos, planeNormal) > ABZA_COMPANION_PLANE_MARGIN) {
-                color = vec4(abzaCompanionShade(coord, surfacePos, worldDir), distance(worldPos, surfacePos));
+                hitCoord = coord;
+                hitPos = surfacePos;
+                hitDistance = distance(worldPos, surfacePos);
                 return 1;
             }
         }

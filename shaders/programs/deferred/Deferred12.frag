@@ -16,6 +16,8 @@
 //  Visibility bitmask things; Lighting that don't need to be calculated in visibility bitmask
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 texBuffer3;
 layout(location = 1) out vec4 texBuffer5;
 layout(location = 2) out float texBuffer10;
@@ -40,6 +42,9 @@ in vec2 texcoord;
 #include "/libs/GbufferData.glsl"
 #include "/abza/GI.glsl"
 #include "/abza/AO.glsl"
+#ifdef ABZA_LATTICE_AO
+    #include "/abza/Lattice.glsl"
+#endif
 
 // https://graphics.stanford.edu/%7Eseander/bithacks.html#CountBitsSetParallel | license: public domain
 uint CountBits(uint v)
@@ -116,6 +121,9 @@ vec4 GetQuaternion(vec3 to)
     vec3 xyz = vec3( to.y,-to.x, 0.0);// cross(from, to);
     float s  =                  -to.z;//   dot(from, to);
 
+    if (s < -0.999999) {
+        return vec4(1.0, 0.0, 0.0, 0.0);
+    }
     float u = inversesqrt(max(0.0, s * 0.5 + 0.5));// rcp(cosine half-angle formula)
 
     s    = 1.0 / u;
@@ -161,7 +169,7 @@ float SamplePartialSlice(float x, float sin_thVN)
         float h0 = sqrt(f0*f0 + kk) - k;
         float h1 = sqrt(f1*f1 + kk) - k;
 
-        float hh = (h0 * h1) / (h0 + h1);
+        float hh = (h0 * h1) / max(h0 + h1, 1e-20);
 
         float y = x - sqrt(hh*(hh + 2.0*k));
         x = uintBitsToFloat(floatBitsToUint(y) ^ sgn);
@@ -310,7 +318,8 @@ vec4 screenSpaceVisibiliyBitmask(vec3 originViewPos, vec3 normal, vec2 texcoord,
             for (int j = 0; j < VB_STEPS; j++) {
                 vec2 sampleCoord = originCoord + stepDir * stepSize;
                 ivec2 sampleTexel = ivec2(sampleCoord * screenSize);
-                float sampleDepth = uintBitsToFloat(texelFetch(colortex6, sampleTexel, 0).r);
+                uint sampleBits = texelFetch(colortex6, sampleTexel, 0).r;
+                float sampleDepth = uintBitsToFloat(sampleBits);
                 stepSize *= stepScale;
                 vec3 sampleViewPos = vec3(sampleCoord * 2.0 - 1.0, 1.0);
                 #ifdef TAA
@@ -326,6 +335,10 @@ vec4 screenSpaceVisibiliyBitmask(vec3 originViewPos, vec3 normal, vec2 texcoord,
                 }
                 if (abs(sampleDepth) != 1.0) {
                     float isHand = float(sampleDepth > 1.0);
+                    // The hand for world pixels and the selection outline (the depth's lowest bit, Deferred0) occlude nothing
+                    if (isHand * isOriginNotHand > 0.5 || (sampleBits & 1u) != 0u) {
+                        continue;
+                    }
                     #ifdef LOD
                         if (sampleDepth < 0.0) {
                             sampleViewPos.z = projInvLod()[3].z;
@@ -385,7 +398,9 @@ void main() {
     GbufferData gbufferData = getGbufferData(texel, texcoord);
     vec3 viewPos;
     float isOriginNotHand = 1.0;
-    gbufferData.depth = uintBitsToFloat(texelFetch(colortex6, texel, 0).r);
+    uint depthBits = texelFetch(colortex6, texel, 0).r;
+    gbufferData.depth = uintBitsToFloat(depthBits);
+    bool isLine = (depthBits & 1u) != 0u;
     #ifdef LOD
         if (gbufferData.depth < 0.0) {
             viewPos = screenToViewPosLod(texcoord, -gbufferData.depth - 1e-7);
@@ -423,17 +438,48 @@ void main() {
         #endif
 
         viewPos += gbufferData.geoNormal * 3e-3;
+        #ifdef ABZA_LATTICE_AO
+            // Ambient occlusion and crease shading baked into Shaders Companion's lattice where it covers the surface: no
+            // noise, no history. Its window reaches at least 24 blocks from the camera; VBAO takes over from 18 to 23 blocks.
+            float latticeOcclusion = 0.0;
+            float latticeCrease = 0.0;
+            float latticeShare = 0.0;
+            if (isOriginNotHand > 0.5 && !isLine && gbufferData.depth >= 0.0) {
+                vec3 latticePos = mat3(gbufferModelViewInverse) * viewPos + gbufferModelViewInverse[3].xyz;
+                vec3 latticeNormal = normalize(mat3(gbufferModelViewInverse) * gbufferData.geoNormal);
+                latticeShare = abzaLatticeOcclusionAt(latticePos, latticeNormal, true, latticeOcclusion, latticeCrease);
+            }
+        #endif
+        // No ambient occlusion, crease shading or bounce light on the selection outline, and no history (Deferred11)
         #ifdef ABZA_VB_TRACE
-            currData = screenSpaceVisibiliyBitmask(viewPos, gbufferData.normal, texcoord, isOriginNotHand);
-            #ifndef AMBIENT_OCCLUSION
-                currData.w = 0.0;
+            bool traced = !isLine;
+            #if defined ABZA_LATTICE_AO && !defined VBGI
+                // Where the lattice alone answers, the visibility bitmask isn't traced
+                traced = traced && latticeShare < 1.0;
             #endif
+            if (traced) {
+                currData = screenSpaceVisibiliyBitmask(viewPos, gbufferData.normal, texcoord, isOriginNotHand);
+                #ifndef AMBIENT_OCCLUSION
+                    currData.w = 0.0;
+                #endif
+            }
         #endif
         vec4 prevData = texelFetch(colortex5, texel, 0);
-        float blendWeight = clamp(1.0 / colorData.w, 0.0, 1.0);
+        float blendWeight = isLine ? 1.0 : clamp(1.0 / colorData.w, 0.0, 1.0);
         currData = mix(prevData, currData, blendWeight);
         crease = abzaCrease(texel, isOriginNotHand, blendWeight, float(ABZA_VB_TRACES));
-        colorData.rgb = abzaCreaseDirect(colorData.rgb, gbufferData.albedo.rgb, gbufferData.emissive, crease);
+        float occlusion = currData.w * (1.0 - 0.15 * blendWeight);
+        float shadeCrease = crease;
+        #ifdef ABZA_LATTICE_AO
+            occlusion = mix(occlusion, latticeOcclusion, latticeShare);
+            shadeCrease = mix(crease, latticeCrease, latticeShare);
+            if (latticeShare >= 1.0) {
+                // Kept as the history VBAO starts from if the surface leaves the field
+                currData.w = latticeOcclusion;
+                crease = latticeCrease;
+            }
+        #endif
+        colorData.rgb = abzaCreaseDirect(colorData.rgb, gbufferData.albedo.rgb, gbufferData.emissive, shadeCrease);
 
         vec3 lightColor = vec3(BASIC_LIGHT);
         #ifdef MOD_NIGHT_VISION_COMPAT
@@ -450,11 +496,11 @@ void main() {
                 (skyColorUp * 0.8 + sunColor * 2.0 * ABZA_AMBIENT * SHADE_FILL * SUNLIGHT_BRIGHTNESS * (1.0 - (0.75 + 0.25 * float(CLOUD_TYPE != 2)) * weatherStrength)) *
                 (1.0 - 0.75 * (1.0 - exp2(-RF_DENSITY * 4.0)) * weatherStrength);
         #endif
-        lightColor *= (1.0 - currData.w * (1.0 - 0.15 * blendWeight));
+        lightColor *= (1.0 - occlusion);
         #ifdef VBGI
             lightColor += currData.rgb;
         #endif
-        lightColor *= abzaCreaseLight(crease, 1.0);
+        lightColor *= abzaCreaseLight(shadeCrease, 1.0);
 
         float diffuseWeight = pow(1.0 - gbufferData.smoothness, 5.0);
         vec3 f0 = vec3(0.04);
@@ -479,3 +525,7 @@ void main() {
 }
 
 /* RENDERTARGETS: 3,5,10 */
+
+#define ABZA_NAN_PASS 5
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer3) || abzaNanBad(texBuffer5) || abzaNanBad(texBuffer10)
+#include "/abza/NanDebugMain.glsl"

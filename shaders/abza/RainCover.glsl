@@ -39,6 +39,14 @@ float abzaRainColumnsOpen(vec3 worldPos, vec3 worldNormal, float unknown) {
         f.y);
 }
 
+// Whether the column a point pushed off the surface along its world-space normal lies in is open above it: side faces
+// read the column in front of them, and nothing reads a neighbouring column (a closed door's inside face, 3/16 of a
+// block from the open column outside it, would take part of its sky)
+float abzaRainColumnOpenAt(vec3 worldPos, vec3 worldNormal, float unknown) {
+    vec3 p = worldPos + worldNormal * 0.05;
+    return abzaRainColumnOpen(ivec2(floor(p.xz)), p.y, unknown);
+}
+
 // How much rain reaches a surface: the sky-light estimate (outdoor, 0 to 1), times the share of the rain heightmap's
 // columns around the point that are open above it. Unknown columns count as open.
 float abzaRainOutdoor(float outdoor, vec3 worldPos, vec3 worldNormal) {
@@ -50,7 +58,7 @@ float abzaRainOutdoor(float outdoor, vec3 worldPos, vec3 worldNormal) {
     return outdoor;
 }
 
-// Sky light (0 to 1) raised to full where the columns above the surface are open: Minecraft's sky light is 15 at every
+// Sky light (0 to 1) raised to full where the column above the surface is open: Minecraft's sky light is 15 at every
 // block above the rain heightmap. Unknown columns count as closed; unchanged in worlds without sky light.
 #if ABZA_SKYLIGHT == 1
     uniform bool hasSkylight;
@@ -59,7 +67,7 @@ float abzaRainOutdoor(float outdoor, vec3 worldPos, vec3 worldNormal) {
 float abzaOpenSkyLight(float skyLight, vec3 worldPos, vec3 worldNormal) {
     #if ABZA_SKYLIGHT == 1
         if (skyLight < 1.0 && hasSkylight && abzaRainCoverReady()) {
-            skyLight = max(skyLight, abzaRainColumnsOpen(worldPos, worldNormal, 0.0));
+            skyLight = max(skyLight, abzaRainColumnOpenAt(worldPos, worldNormal, 0.0));
         }
     #endif
     return skyLight;

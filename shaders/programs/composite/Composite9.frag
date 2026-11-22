@@ -16,6 +16,8 @@
 //  TAA stage 2: sample and blend; Moving previous exposure and smooth center depth to let colortex7 flipped without info lost
 //
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 texBuffer3;
 layout(location = 1) out uint texBuffer6;
 
@@ -75,7 +77,7 @@ void resolverAABB(ivec2 texel, out vec3 avgColor, out vec3 variance, float varia
     m1 /= 9.0;
     m2 /= 9.0;
 
-    vec3 sampleVariance = sqrt(m2 - m1 * m1) * varianceScale * TAA_HISTORY_CLIP_VARIANCE;
+    vec3 sampleVariance = sqrt(max(m2 - m1 * m1, vec3(0.0))) * varianceScale * TAA_HISTORY_CLIP_VARIANCE;
 
     vec3 minColor = m1 - sampleVariance;
     vec3 maxColor = m1 + sampleVariance;
@@ -86,6 +88,8 @@ void resolverAABB(ivec2 texel, out vec3 avgColor, out vec3 variance, float varia
     avgColor = minColor + maxColor;
     variance = maxColor - minColor;
 }
+
+#include "/abza/TaaClip.glsl"
 
 vec3 getCurrColorNeighborhood(ivec2 texel, vec3 currColor) {
     vec4 colorAccum = vec4(currColor, 1.0);
@@ -135,11 +139,14 @@ vec3 temporalAntiAliasing(vec2 coord, ivec2 texel, vec2 velocity, vec3 currentCo
         vec3 previousColor = RGB_YCoCg(catmullRomFilter(reprojectCoord) * 0.1);
         currentColor = RGB_YCoCg(currentColor * 0.1);
 
-        vec3 avgColor;
-        vec3 variance;
-        resolverAABB(texel, avgColor, variance, 2.0, currentColor);
-
-        previousColor = clipToEllipse(avgColor, variance, previousColor);
+        #if TAA_STYLE == 0
+            vec3 avgColor;
+            vec3 variance;
+            resolverAABB(texel, avgColor, variance, 2.0, currentColor);
+            previousColor = clipToEllipse(avgColor, variance, previousColor);
+        #else
+            previousColor = abzaTaaClip(texel, currentColor, previousColor);
+        #endif
 
         antiAliasing = mix(currentColor, previousColor, vec3(blendWeight));
         antiAliasing = YCoCg_RGB(antiAliasing) * 10.0;
@@ -186,3 +193,7 @@ void main() {
 }
 
 /* DRAWBUFFERS:36 */
+
+#define ABZA_NAN_PASS 21
+#define ABZA_NAN_OUTPUTS abzaNanBad(texBuffer3)
+#include "/abza/NanDebugMain.glsl"

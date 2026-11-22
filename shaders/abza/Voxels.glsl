@@ -27,8 +27,11 @@
 
     const int abzaVoxelMask = ABZA_VOXEL_GRID - 1;
 
-    uniform vec3 cameraPositionFract;
-    uniform ivec3 cameraPositionInt;
+    #ifndef ABZA_CAMERA_POSITION_INT
+        #define ABZA_CAMERA_POSITION_INT
+        uniform vec3 cameraPositionFract;
+        uniform ivec3 cameraPositionInt;
+    #endif
 
     layout(std430, binding = 0) buffer abzaVoxelFaceBuffer {
         uvec2 abzaVoxelFaces[];

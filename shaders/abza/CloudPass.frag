@@ -4,6 +4,8 @@
 
 #extension GL_ARB_gpu_shader5 : enable
 
+#include "/abza/NanDebug.glsl"
+
 layout(location = 0) out vec4 cloudLight;
 layout(location = 1) out vec4 cloudInfo;
 
@@ -32,13 +34,20 @@ void main() {
     cloudInfo = vec4(0.0, -1.0, 1.0, 0.0);
     #ifdef ABZA_HALF_RES_CLOUDS
         ivec2 fullTexel = ivec2(gl_FragCoord.xy) * 2;
-        if (abzaCloudsHidden(fullTexel)) {
-            cloudInfo.b = 0.0;
-            return;
-        }
         vec2 coord = gl_FragCoord.xy * 2.0 * texelSize;
         vec3 worldDir = normalize(mat3(gbufferModelViewInverse) * screenToViewPos(coord, 1.0));
         vec4 intersectionData = planetIntersectionData(gbufferModelViewInverse[3].xyz, worldDir);
+        if (abzaCloudsHidden(fullTexel)) {
+            // The clouds behind keep their history (reprojected, unchanged) while hidden, so where the surface moves
+            // away (a mob, the camera passing a post) they come back converged instead of starting over
+            cloudInfo = vec4(0.0, -1.0, 1.0, abzaCloudFrameTag(frameCounter));
+            if (abzaAccumulateClouds(coord, worldDir, intersectionData.z, 1.0, cloudLight, cloudInfo)) {
+                return;
+            }
+            cloudLight = vec4(0.0);
+            cloudInfo = vec4(0.0, -1.0, 0.0, 0.0);
+            return;
+        }
         vec3 atmosphere = vec3(0.0);
         #if ABZA_AIR == 1
             singleAtmosphereScattering(vec3(0.0), gbufferModelViewInverse[3].xyz, worldDir, sunDirection, intersectionData, skyColorUp, (30.0), atmosphere);
@@ -49,8 +58,13 @@ void main() {
         );
         cloudLight = vec4(clouds.rgb, abzaCloudBlend);
         cloudInfo = vec4(clouds.a, cloudDepth, 1.0, abzaCloudFrameTag(frameCounter));
-        abzaAccumulateClouds(coord, intersectionData.xyz, cloudLight, cloudInfo);
+        abzaAccumulateClouds(coord, worldDir, intersectionData.z, abzaCloudHistoryWeight, cloudLight, cloudInfo);
     #endif
 }
 
 /* DRAWBUFFERS:89 */
+
+#define ABZA_NAN_PASS 6
+#define ABZA_NAN_SCALE 2
+#define ABZA_NAN_OUTPUTS abzaNanBad(cloudLight) || abzaNanBad(cloudInfo)
+#include "/abza/NanDebugMain.glsl"
