@@ -74,8 +74,11 @@
         #endif
     }
 
-    // The size of the water a pixel covers, in blocks, from the change in its view position to the next pixels
-    float abzaWaterFootprint(vec3 viewPos) {
-        return max(length(dFdx(viewPos)), length(dFdy(viewPos)));
-    }
+    // The size of the water a pixel covers, in blocks, from the change in its view position to the next pixels (not in
+    // compute programs, which have no derivatives: ABZA_NO_DERIVATIVES)
+    #ifndef ABZA_NO_DERIVATIVES
+        float abzaWaterFootprint(vec3 viewPos) {
+            return max(length(dFdx(viewPos)), length(dFdy(viewPos)));
+        }
+    #endif
 #endif

@@ -1,0 +1,59 @@
+//
+//  ABZA Shader: Shaders Companion's far terrain written into the gbuffers (colortex0 to 2) where the chunk terrain drew
+//  nothing: the opaque layer before the deferred lighting (deferred_a, ABZA_FAR_SOLID_PASS), the translucent layer after
+//  it (deferred98_a, ABZA_FAR_TRANSLUCENT_PASS), as Distant Horizons' dh_terrain and dh_water draw theirs
+//
+
+#define ABZA_NAN_NO_WRAP
+#include "/abza/NanDebug.glsl"
+
+layout(local_size_x = 8, local_size_y = 8) in;
+const vec2 workGroupsRender = vec2(1.0, 1.0);
+
+layout(rgba8) uniform writeonly image2D colorimg0;
+layout(rgba16) uniform writeonly image2D colorimg1;
+layout(rgba16) uniform writeonly image2D colorimg2;
+
+#include "/settings/GlobalSettings.glsl"
+#include "/libs/Uniform.glsl"
+#include "/libs/Common.glsl"
+#include "/libs/GbufferData.glsl"
+#ifdef ABZA_FAR_TRANSLUCENT_PASS
+    #define ABZA_NO_DERIVATIVES
+    #include "/libs/Water.glsl"
+    #include "/abza/WaterWaves.glsl"
+#endif
+#ifdef ABZA_FAR_TERRAIN
+    #include "/abza/FarMerge.glsl"
+#endif
+
+void main() {
+    #ifdef ABZA_FAR_TERRAIN
+        ivec2 texel = ivec2(gl_GlobalInvocationID.xy);
+        if (any(greaterThanEqual(texel, ivec2(screenSize))) || !abzaFarDrawn() || texelFetch(depthtex1, texel, 0).r < 1.0) {
+            return;
+        }
+        vec4 data0, data1, data2;
+        #ifdef ABZA_FAR_TRANSLUCENT_PASS
+            bool found = abzaFarTranslucent(texel, data0, data1, data2);
+        #else
+            bool found = abzaFarSolid(texel, data0, data1, data2);
+        #endif
+        if (!found) {
+            return;
+        }
+        imageStore(colorimg0, texel, data0);
+        imageStore(colorimg1, texel, data1);
+        imageStore(colorimg2, texel, data2);
+        #ifdef NAN_DEBUG_VIEW
+            // The bits of dh_terrain and dh_water, which never draw while the far terrain does
+            if (abzaNanBad(data0) || abzaNanBad(data1) || abzaNanBad(data2)) {
+                #ifdef ABZA_FAR_TRANSLUCENT_PASS
+                    abzaNanMark(texel, 1, 10);
+                #else
+                    abzaNanMark(texel, 1, 2);
+                #endif
+            }
+        #endif
+    #endif
+}

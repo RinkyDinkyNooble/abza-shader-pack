@@ -82,10 +82,11 @@ float abzaTaaHistoryWeight(vec2 prevCoord, float accepted, float distanceFactor,
     frames = min(texelFetch(colortex13, ivec2(prevTexel), 0).r + 1.0, 99.0);
     #if TAA_STYLE == 0
         return min(accepted, frames / (frames + 1.0));
+    #else
+        float weight = min(frames / (frames + 1.0), mix(TAA_HISTORY_WEIGHT - 0.3, TAA_HISTORY_WEIGHT - 0.05, distanceFactor));
+        vec2 centred = 1.0 - abs(2.0 * fract(prevTexel) - 1.0);
+        float offCentre = 0.75 + 0.25 * sqrt(centred.x * centred.y);
+        frames *= offCentre;
+        return weight * offCentre;
     #endif
-    float weight = min(frames / (frames + 1.0), mix(TAA_HISTORY_WEIGHT - 0.3, TAA_HISTORY_WEIGHT - 0.05, distanceFactor));
-    vec2 centred = 1.0 - abs(2.0 * fract(prevTexel) - 1.0);
-    float offCentre = 0.75 + 0.25 * sqrt(centred.x * centred.y);
-    frames *= offCentre;
-    return weight * offCentre;
 }

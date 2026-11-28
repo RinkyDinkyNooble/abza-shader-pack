@@ -4,7 +4,8 @@
 //  block light as Deferred12 does, with ambient occlusion from the mirror view's own surfaces (Deferred12's own
 //  occlusion and bounce light need the screen). Water and glass are drawn over what the mod's copy of the view shows
 //  behind them. Surfaces farther along the reflection than COMPANION_MIRROR_DETAIL blocks get hard shadows, no
-//  occlusion and calm water. colortex14 holds one screen-sized tile per mirrored plane, side by side (its
+//  occlusion and calm water. The mod's far terrain in the views is lit as the chunk terrain is, with the far terrain's
+//  shadows past the shadow map (abza/FarShadow.glsl). colortex14 holds one screen-sized tile per mirrored plane, side by side (its
 //  size.buffer in shaders.properties), in the order of the mod's info rows.
 //
 
@@ -192,6 +193,10 @@ layout(location = 0) out vec4 texBuffer14;
             #endif
             vec3 subsurfaceScattering = vec3(float(porosity > 64.5 / 255.0)) * shadow * shadowDiffuse;
             shadow *= shadowDiffuse + shadowSpecular;
+            #ifdef ABZA_FAR_TERRAIN
+                vec3 abzaShadowBefore = shadow;
+                vec3 abzaSubsurfaceBefore = subsurfaceScattering;
+            #endif
             #ifdef PCSS
                 if (detailed) {
                     percentageCloserSoftShadow(
@@ -204,6 +209,13 @@ layout(location = 0) out vec4 texBuffer14;
             {
                 singleSampleShadow(worldPos, normal, NdotL, viewMaterial.smoothness, porosity, skyLevel, shadow, subsurfaceScattering);
             }
+            #ifdef ABZA_FAR_TERRAIN
+                // Past the shadow map's reach, the far terrain's shadows from Shaders Companion's far shadow map
+                abzaFarShadow(
+                    worldPos, normal, NdotL, viewMaterial.smoothness, porosity, skyLevel, blueNoiseTemporal(gl_FragCoord.xy / screenSize).y,
+                    abzaShadowBefore, abzaSubsurfaceBefore, shadow, subsurfaceScattering
+                );
+            #endif
             // Deferred12 shades Deferred11's direct light by a share of the crease shading (abzaCreaseDirect)
             color += (shadow + subsurfaceScattering * abzaPlantGlow(rayDir, shadowDirection)) * abzaCreaseLight(crease, CREASE_SHADING_DIRECT);
         #endif

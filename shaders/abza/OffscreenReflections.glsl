@@ -94,6 +94,13 @@
         #ifdef ABZA_MIRROR
             int result = abzaMirrorReflection(viewToWorldPos(viewPos), mat3(gbufferModelViewInverse) * viewGeoNormal,
                 mat3(gbufferModelViewInverse) * viewRayDir, color);
+            #ifdef ABZA_FAR_TERRAIN
+                // A mirror view without the far terrain (Shaders Companion before 3.0.0-dev4, or its farTerrainInViews
+                // off): where it shows open sky, screen-space reflection looks for far terrain on screen
+                if (result == 0 && abzaFarDrawn() && abzaMirrorLastFarRange <= 0.0) {
+                    result = -1;
+                }
+            #endif
             #ifdef ABZA_COMPANION_DEBUG_VIEW
                 if (result == 2) {
                     result = 1;
@@ -116,6 +123,13 @@
     bool abzaOffscreenReflection(vec3 viewPos, vec3 viewGeoNormal, vec3 viewRayDir, out vec4 color, out bool open) {
         color = vec4(0.0);
         open = false;
+        #ifdef ABZA_FAR_TERRAIN
+            // Rays from far terrain texels (the chunk terrain drew nothing here) start outside the cube, the voxel copy
+            // and the lattice, which hold the world around the camera: no hit, the sky answers
+            if (texelFetch(depthtex0, ivec2(gl_FragCoord.xy), 0).r >= 1.0 && abzaFarDrawn()) {
+                return false;
+            }
+        #endif
         vec3 worldGeoNormal = mat3(gbufferModelViewInverse) * viewGeoNormal;
         vec3 traceStart = viewToWorldPos(viewPos) + worldGeoNormal * 0.02;
         vec3 traceDir = mat3(gbufferModelViewInverse) * viewRayDir;

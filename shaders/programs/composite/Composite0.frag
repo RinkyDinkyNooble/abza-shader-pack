@@ -425,6 +425,10 @@ void main() {
         waterDepth += float(waterDepth == 1.0) * getLodDepthWater(texcoord);
         solidDepth += float(solidDepth == 1.0) * getLodDepthSolid(texcoord);
     #endif
+    #ifdef ABZA_FAR_TERRAIN
+        // Far surfaces the fog hides (heavy rain) reflect nothing
+        bool farFogged = waterDepth > 1.0 && waterDepth < 2.0 && abzaFarFogHides(screenToViewPosLod(texcoord, waterDepth - 1.0));
+    #endif
     texBuffer0 = vec4(vec3(0.0), texelFetch(colortex4, texel, 0).w);
 
     vec4 reflectionColor = vec4(0.0);
@@ -468,6 +472,9 @@ void main() {
                     }
                 }
             }
+            #ifdef ABZA_FAR_TERRAIN
+                reflectionStrength *= float(!farFogged);
+            #endif
 
             #if ROUGH_REFLECTION_RATE > 1
                 // Rough and faint reflections: only some tiles trace them each frame, in turn (abza/ReflectionRate.glsl)

@@ -29,11 +29,18 @@
         vec2 size;
         vec2 tile;
         float fadeIn;
+        #ifdef ABZA_FAR_TERRAIN
+            float farRange;
+        #endif
         int row;
     };
 
     // The fade-in of the plane the last abzaMirrorReflection that applied used
     float abzaMirrorLastFade = 1.0;
+    #ifdef ABZA_FAR_TERRAIN
+        // How far the far terrain in that plane's view reaches (0 when the view holds none)
+        float abzaMirrorLastFarRange = 0.0;
+    #endif
 
     // A row's plane; false for an empty slot (or no mirror view this frame)
     bool abzaMirrorPlaneOf(int row, out AbzaMirrorPlane mirror) {
@@ -49,6 +56,10 @@
             texelFetch(scMirrorInfo, ivec2(5, row), 0), texelFetch(scMirrorInfo, ivec2(6, row), 0)
         );
         mirror.size = header.zw;
+        #ifdef ABZA_FAR_TERRAIN
+            // Texel 7 w: the far terrain's range in the view (Shaders Companion 3.0.0-dev4 on; Distant Horizons' before)
+            mirror.farRange = texelFetch(scMirrorInfo, ivec2(7, row), 0).w;
+        #endif
         vec4 fadeAndTile = texelFetch(scMirrorInfo, ivec2(8, row), 0);
         mirror.fadeIn = clamp(fadeAndTile.x, 0.0, 1.0);
         mirror.tile = fadeAndTile.yz;
@@ -107,7 +118,13 @@
                 screenCoord += taaOffset * 0.5;
             #endif
             if (all(lessThan(floatBitsToUint(screenCoord), floatBitsToUint(screenEdge)))) {
-                float screenDepth = screenToViewDepth(textureLod(depthtex1, screenCoord, 0.0).x);
+                #ifdef ABZA_FAR_TERRAIN
+                    // Where the chunk terrain drew nothing, the far terrain the screen shows there
+                    float rawDepth = textureLod(depthtex1, screenCoord, 0.0).x;
+                    float screenDepth = rawDepth < 1.0 ? screenToViewDepth(rawDepth) : screenToViewDepthLod(getLodDepthSolid(screenCoord));
+                #else
+                    float screenDepth = screenToViewDepth(textureLod(depthtex1, screenCoord, 0.0).x);
+                #endif
                 float margin = 0.05 - viewSurface.z * 5e-3;
                 onScreen = 1.0 - smoothstep(margin, margin * 4.0, abs(screenDepth + viewSurface.z));
                 // Faded out over the last 6% of the screen toward its edges, so where the reflected point leaves the
@@ -168,6 +185,9 @@
             return -1;
         }
         abzaMirrorLastFade = mirror.fadeIn;
+        #ifdef ABZA_FAR_TERRAIN
+            abzaMirrorLastFarRange = mirror.farRange;
+        #endif
         vec3 origin = mirror.origin;
         mat4 toClip = mirror.toClip;
         vec3 start = worldPos - mirror.plane.xyz * height;

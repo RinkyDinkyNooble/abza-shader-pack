@@ -1,7 +1,8 @@
 //
 //  ABZA Shader: reflections from Shaders Companion, a companion mod that draws a low-resolution cube view of the
-//  terrain, entities and Distant Horizons LODs around the camera, and a mirror view, into textures (layout: the mod's
-//  API.md, cube protocol 2, mirror view protocol 3)
+//  terrain, entities and its far terrain around the camera, and a mirror view, into textures (layout: the mod's API.md,
+//  cube protocol 2, mirror view protocol 3). From Shaders Companion 3.0 the views' far terrain is the mod's own, in the
+//  fields of chunk blocks; Shaders Companion 2.x drew Distant Horizons' LODs there (the 0xC000 range).
 //
 
 #ifndef ABZA_COMPANION_GLSL
@@ -55,8 +56,8 @@
         #include "/abza/WaterSurface.glsl"
     #endif
 
-    // Whether a texel's id field (see abzaCompanionShadeTexel) is water: a water block, a water cauldron's water or
-    // Distant Horizons' water
+    // Whether a texel's id field (see abzaCompanionShadeTexel) is water: a water block (the mod's far water too), a water
+    // cauldron's water or Distant Horizons' water (Shaders Companion 2.x)
     bool abzaCompanionIsWater(uint id) {
         return id == 8193u || id == 8195u || id == (0xC000u | 12u);
     }
@@ -148,9 +149,10 @@
 
     // The lit colour of a surface the mod drew, from its albedo (alpha below 1 on water and glass) and data texels (the
     // cube's or the mirror view's); surfacePos is the surface point, relative to this frame's camera, and rayDir the
-    // direction the reflection ray reached it in. The id field tells blocks (block.properties id + 1), entities
-    // (0x8000 + entity.properties id + 1) and Distant Horizons LODs (0xC000 + its block material) apart. Opaque blocks
-    // with a material class are lit with their class's values (abza/ViewMaterial.glsl).
+    // direction the reflection ray reached it in. The id field tells blocks (block.properties id + 1; the mod's far
+    // terrain too), entities (0x8000 + entity.properties id + 1) and Distant Horizons LODs (0xC000 + its block material,
+    // Shaders Companion 2.x) apart. Opaque blocks with a material class are lit with their class's values
+    // (abza/ViewMaterial.glsl).
     vec3 abzaCompanionShadeTexel(vec4 albedoTexel, vec4 rawData, vec3 surfacePos, vec3 rayDir) {
         vec3 albedo = albedoTexel.rgb;
         uvec3 data = uvec3(round(rawData.rgb * 65535.0));
@@ -208,7 +210,7 @@
     #define ABZA_COMPANION_STEPS 40
     #define ABZA_COMPANION_REFINEMENTS 6
     // Surfaces closer than this (blocks) to the reflecting surface's own plane are not hits: the surface itself, what
-    // lies level with it, and Distant Horizons' water, drawn 1/9 block above the water it continues
+    // lies level with it, and far water, a voxel high: 1/9 block above the water it continues
     #define ABZA_COMPANION_PLANE_MARGIN 0.2
 
     // True when the mod is installed, speaks this protocol and has drawn the cube at least once
@@ -290,7 +292,7 @@
     // distance, like screen-space reflection on a screen all around the camera. A sample is behind the cube's surface
     // when it is farther from the face's origin than the surface in its direction; a crossing within the step's length
     // is refined by halving and is a hit when the refined point lies on the surface, clear of the reflecting surface's
-    // plane (planeNormal through worldPos). Past the march, far surfaces (distant terrain, Distant Horizons LODs) are
+    // plane (planeNormal through worldPos). Past the march, far surfaces (distant terrain, the mod's far terrain) are
     // read in the ray's direction and count where they lie past the marched part of the ray. Returns 1 on a hit (its
     // atlas coordinate, its surface point relative to this frame's camera, and the distance travelled; abzaCompanionShade
     // lights it), 0 when the cube sees open sky in the ray's way, -1 where part of the cube hasn't been drawn yet or the

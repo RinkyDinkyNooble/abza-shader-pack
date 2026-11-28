@@ -59,6 +59,13 @@ void main() {
         float rayLength = length(waterViewPos);
         vec3 worldDir = normalize(mat3(gbufferModelViewInverse) * waterViewPos);
         float marchLength = abzaVLMarchLength(worldDir, rayLength);
+        #ifdef ABZA_FAR_LIGHT_SHAFTS
+            #ifdef ABZA_FAR_SHADOW_MAP
+                abzaVLFarShadowMap = abzaFarShadowReady();
+                if (!abzaVLFarShadowMap)
+            #endif
+            abzaVLFarShade = abzaFarShaftRange(coord, waterViewPos / rayLength, fract(bayer64Temporal(vec2(halfTexel) + 0.5) + 0.618034));
+        #endif
 
         vec4 light = abzaVolumetricLight(worldDir, marchLength, bayer64Temporal(vec2(halfTexel) + 0.5));
         light = abzaVLAccumulate(light, worldDir, rayLength, marchLength);

@@ -2,6 +2,11 @@
 
 ABZA Shader is based on Sundial Lite v1.2.0 by GeForceLegend (GPL-3.0). This file lists every change, newest first.
 
+## 3.0.0 (2026-11-27)
+
+- With [Shaders Companion](https://www.curseforge.com/minecraft/mc-mods/shaders-companion) 3.0.0: the mod's far terrain past your render distance is lit, fogged and shaded by this pack like the land around you, water included ("Far terrain", Shaders Companion screen). Under "Far terrain effects": far mountains, hills and trees cast shadows from the sun and the moon, clouds shadow the far land, and far mountains hide the sun from the haze in their shadow. Reflections and the mirror show the far terrain too. While Distant Horizons draws far terrain, its terrain is shown instead, as before.
+- Depth of field is off by default and in the High and ABZA presets.
+
 ## 2.0.0 (2026-11-22)
 
 - New presets: Low, Medium, High, Ultra and ABZA replace Potato, Standard, High, Ultra and Max. Each adds features to the one before. Low has the clouds and your own shadow; Medium adds ambient occlusion, light shafts, fog, underwater caustics and puddles; High, the default, adds reflections, soft, coloured and cloud shadows and depth of field; Ultra adds a 4096-pixel shadow map and mob shadows. ABZA is High with "ABZA modpack" on. Presets no longer change exposure, TAA style, motion blur or the look options, so those stay as you set them.

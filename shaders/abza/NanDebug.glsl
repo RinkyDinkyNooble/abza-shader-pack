@@ -7,9 +7,9 @@
 //  ABZA_NAN_NO_WRAP leaves main as it is (compute passes call abzaNanMark themselves).
 //
 //  Pass bits, in the order Oculus draws them:
-//   0 sky (gbuffers_skybasic)          10 dh_water                      19 composite7
+//   0 sky (gbuffers_skybasic)          10 dh_water, deferred98_a        19 composite7
 //   1 opaque gbuffers                  11 composite                     20 composite8
-//   2 dh_terrain                       12 composite1                    21 composite9
+//   2 dh_terrain, deferred_a           12 composite1                    21 composite9
 //   3 deferred                         13 composite2                    22 composite10
 //   4 deferred11                       14 composite3                    23 composite11
 //   5 deferred12                       15 composite4                    24 composite12

@@ -2,7 +2,7 @@
 //  ABZA Shader: settings and per-world configuration
 //
 
-#define ABZA_SHADER v2_0_0 // [v2_0_0]
+#define ABZA_SHADER v3_0_0 // [v3_0_0]
 
 // Shadow filtering
     #define SHADOW_EDGE_SOFTNESS 0.5 // [0.25 0.5 0.75 1.0 1.5 2.0]
@@ -45,6 +45,32 @@
 // Closed doors keep light out: read by the Shaders Companion mod, which works out the light around closed doors
     // #define COMPANION_DOOR_LIGHT
     #ifdef COMPANION_DOOR_LIGHT
+    #endif
+
+// Far terrain: Shaders Companion's far terrain merged into the gbuffers (abza/FarTerrain.glsl, abza/FarMerge.glsl) and
+// shaded through the LOD paths, only while neither Distant Horizons nor Voxy draws far terrain
+    // #define COMPANION_FAR_TERRAIN
+    // Far terrain's own shadows (the mod's far shadow map, abza/FarShadow.glsl); clouds' shadows on far terrain; light
+    // shafts through far terrain and the volumetric light's march over it
+    #define COMPANION_FAR_SHADOWS
+    #define COMPANION_FAR_CLOUD_SHADOW
+    #define COMPANION_FAR_LIGHT_SHAFTS
+    #ifdef COMPANION_FAR_TERRAIN
+        #if !defined DISTANT_HORIZONS && !defined VOXY
+            #define ABZA_FAR_TERRAIN
+            #ifndef LOD
+                #define LOD
+            #endif
+            #ifdef COMPANION_FAR_SHADOWS
+                #define ABZA_FAR_SHADOWS
+            #endif
+            #ifndef COMPANION_FAR_CLOUD_SHADOW
+                #define ABZA_FAR_NO_CLOUD_SHADOW
+            #endif
+            #ifdef COMPANION_FAR_LIGHT_SHAFTS
+                #define ABZA_FAR_LIGHT_SHAFTS
+            #endif
+        #endif
     #endif
 
 // Reflections

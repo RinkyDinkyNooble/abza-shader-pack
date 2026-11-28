@@ -1,83 +1,101 @@
 #include "/libs/Materials.glsl"
 
 #ifdef LOD
+    #ifdef ABZA_FAR_TERRAIN
+        #include "/abza/FarTerrain.glsl"
+    #endif
+
     mat4 projLod() {
         #ifdef DISTANT_HORIZONS
             return dhProjection;
-        #endif
-        #ifdef VOXY
+        #elif defined VOXY
             return vxProj;
+        #elif defined ABZA_FAR_TERRAIN
+            return abzaFarProjection();
+        #else
+            return gbufferProjection;
         #endif
-        return gbufferProjection;
     }
 
     mat4 projInvLod() {
         #ifdef DISTANT_HORIZONS
             return dhProjectionInverse;
-        #endif
-        #ifdef VOXY
+        #elif defined VOXY
             return vxProjInv;
+        #elif defined ABZA_FAR_TERRAIN
+            return abzaFarProjectionInverse();
+        #else
+            return gbufferProjectionInverse;
         #endif
-        return gbufferProjectionInverse;
     }
 
     mat4 projPrevLod() {
         #ifdef DISTANT_HORIZONS
             return dhPreviousProjection;
-        #endif
-        #ifdef VOXY
+        #elif defined VOXY
             return vxProjPrev;
+        #elif defined ABZA_FAR_TERRAIN
+            return abzaFarPreviousProjection();
+        #else
+            return gbufferPreviousProjection;
         #endif
-        return gbufferPreviousProjection;
     }
 
     float lodRenderDistance() {
         #ifdef DISTANT_HORIZONS
             return float(dhRenderDistance);
-        #endif
-        #ifdef VOXY
+        #elif defined VOXY
             return vxRenderDistance * 16.0;
+        #elif defined ABZA_FAR_TERRAIN
+            return abzaFarRange();
+        #else
+            return far;
         #endif
-        return far;
     }
 
     float getLodDepthSolid(vec2 coord) {
         #ifdef DISTANT_HORIZONS
             return textureLod(dhDepthTex1, coord, 0.0).x;
-        #endif
-        #ifdef VOXY
+        #elif defined VOXY
             #if SR_ENABLE
                 coord *= upscaleRatio;
             #endif
             return textureLod(vxDepthTexOpaque, coord, 0.0).x;
+        #elif defined ABZA_FAR_TERRAIN
+            return abzaFarDepthSolid(coord);
+        #else
+            return textureLod(depthtex1, coord, 0.0).x;
         #endif
-        return textureLod(depthtex1, coord, 0.0).x;
     }
 
     float getLodDepthSolidDeferred(vec2 coord) {
         #ifdef DISTANT_HORIZONS
             return textureLod(dhDepthTex0, coord, 0.0).x;
-        #endif
-        #ifdef VOXY
+        #elif defined VOXY
             #if SR_ENABLE
                 coord *= upscaleRatio;
             #endif
             return textureLod(vxDepthTexOpaque, coord, 0.0).x;
+        #elif defined ABZA_FAR_TERRAIN
+            return abzaFarDepthSolid(coord);
+        #else
+            return textureLod(depthtex0, coord, 0.0).x;
         #endif
-        return textureLod(depthtex0, coord, 0.0).x;
     }
 
     float getLodDepthWater(vec2 coord) {
         #ifdef DISTANT_HORIZONS
             return textureLod(dhDepthTex0, coord, 0.0).x;
-        #endif
-        #ifdef VOXY
+        #elif defined VOXY
             #if SR_ENABLE
                 coord *= upscaleRatio;
             #endif
             return textureLod(vxDepthTexTrans, coord, 0.0).x;
+        #elif defined ABZA_FAR_TERRAIN
+            return abzaFarDepthNearest(coord);
+        #else
+            return textureLod(depthtex0, coord, 0.0).x;
         #endif
-        return textureLod(depthtex0, coord, 0.0).x;
     }
 
     vec3 screenToViewPosLod(vec2 coord, float depth) {

@@ -12,7 +12,7 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 | Forge | 47 |
 | Oculus | 1.8.0, with Embeddium |
 | Distant Horizons | Optional, tested with 3.3.2 |
-| [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) | Optional, 2.0.0: mirrors in water and glass, steady ambient occlusion, the Auto-PBR Material Engine |
+| [Shaders Companion](https://github.com/RinkyDinkyNooble/shaders-companion) | Optional, 3.0.0: far terrain, mirrors in water and glass, steady ambient occlusion, the Auto-PBR Material Engine |
 
 ## Presets
 
@@ -22,8 +22,8 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 |---|---|
 | Low | Realistic clouds with the high cloud layer, sharp shadows from a 1024-pixel map (your own shadow, not mobs'); no reflections, ambient occlusion, light shafts, fog or puddles |
 | Medium | Low plus ambient occlusion, light shafts and volumetric fog, underwater caustics, rain puddles and ripples, 2x texture filtering |
-| High (default) | Medium plus reflections, soft, contact, coloured and cloud shadows, depth of field and a 2048-pixel shadow map |
-| Ultra | High plus mob shadows, a 4096-pixel shadow map and 4x texture filtering; with Shaders Companion, its mirror view |
+| High (default) | Medium plus reflections, soft, contact, coloured and cloud shadows and a 2048-pixel shadow map |
+| Ultra | High plus depth of field, mob shadows, a 4096-pixel shadow map and 4x texture filtering; with Shaders Companion, its mirror view |
 | ABZA | High with "ABZA modpack" on |
 | Max | Only in Shaders Companion's copy of the pack: Ultra plus the Auto-PBR Material Engine, four mirror planes and every pixel tracing its own rough reflection |
 

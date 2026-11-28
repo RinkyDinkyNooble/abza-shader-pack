@@ -17,7 +17,7 @@
 //
 
 #ifndef DISTANT_HORIZONS
-    #define DISTANT_HORIZONS
+    #define DISTANT_HORIZONS 1
 
     in int dhMaterialId;
 #endif

@@ -50,8 +50,9 @@ vec3 atmosphereAbsorptionLUT(float height, float angle) {
     float lutAngle = 0.5 + angle * 255.0 / 512.0;
     #ifdef IS_IRIS
         return textureLod(transmittanceTex, vec2(lutHeight, lutAngle), 0.0).rgb;
+    #else
+        return textureLod(colortex7, vec2(lutHeight, lutAngle), 0.0).rgb;
     #endif
-    return textureLod(colortex7, vec2(lutHeight, lutAngle), 0.0).rgb;
 }
 
 void atmosphereAbsorptionDoubleSideLUT(float height, float angle, out vec3 sunAbsorption, out vec3 moonAbsorption) {

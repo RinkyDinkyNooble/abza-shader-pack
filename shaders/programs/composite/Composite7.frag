@@ -29,7 +29,7 @@ in float smoothCenterDepth;
 in vec2 texcoord;
 
 // Depth of field
-    #define DEPTH_OF_FIELD
+    // #define DEPTH_OF_FIELD
     #define FOCUS_MODE 0 // [0 1]
     // #define HAND_DOF
     #define COC_SPREAD_SAMPLES 10 // [2 3 4 5 6 7 8 9 10 12 14 16 18 20 22 25 30 35 40 45 50 60 70 80 90 100]
@@ -76,14 +76,16 @@ float getFarthestPrevDepth(vec2 coord, out float nearest) {
     vec4 depthGatherLod(vec2 coord) {
         #ifdef DISTANT_HORIZONS
             return textureGather(dhDepthTex0, coord, 0);
-        #endif
-        #ifdef VOXY
+        #elif defined VOXY
             #if SR_ENABLE
                 coord *= upscaleRatio;
             #endif
             return textureGather(vxDepthTexTrans, coord, 0);
+        #elif defined ABZA_FAR_TERRAIN
+            return abzaFarGatherNearest(coord);
+        #else
+            return textureGather(depthtex0, coord, 0);
         #endif
-        return textureGather(depthtex0, coord, 0);
     }
 #endif
 

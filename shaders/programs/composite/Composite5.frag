@@ -46,6 +46,9 @@ in vec2 texcoord;
 #include "/libs/GbufferData.glsl"
 #include "/abza/MetalTint.glsl"
 #include "/libs/Shadow.glsl"
+#ifdef ABZA_FAR_TERRAIN
+    #include "/abza/FarShadow.glsl"
+#endif
 #include "/abza/WaterBehind.glsl"
 
 #ifdef ABZA_PLANET_FOG
@@ -261,12 +264,22 @@ void main() {
                     waterWorldPos, mat3(gbufferModelViewInverse) * gbufferData.geoNormal, NdotL, gbufferData.smoothness,
                     gbufferData.porosity, gbufferData.lightmap.y, shadow, subsurfaceScattering
                 );
+                #ifdef ABZA_FAR_TERRAIN
+                    abzaFarShadow(
+                        waterWorldPos, mat3(gbufferModelViewInverse) * gbufferData.geoNormal, NdotL, gbufferData.smoothness, gbufferData.porosity,
+                        gbufferData.lightmap.y, fract(bayer64Temporal(gl_FragCoord.xy) + 0.381966), vec3(1.0),
+                        vec3(float(gbufferData.porosity > 64.5 / 255.0)), shadow, subsurfaceScattering
+                    );
+                #endif
                 shadow *= (1.0 - gbufferData.metalness) * gbufferData.albedo.rgb * gbufferData.albedo.w * isTargetParticle + sunlightSpecular(
                     waterWorldDir, shadowDirection, worldNormal, gbufferData.smoothness * 0.995, NdotL, LdotH, f0, vec3(1.0)
                 ) * airAbsorption(11.4 * gbufferData.smoothness) * clamp(19.0 - gbufferData.smoothness * 20.0, 0.0, 1.0);
                 shadow += subsurfaceScattering * (1.0 - gbufferData.metalness) * gbufferData.albedo.rgb * gbufferData.albedo.w * isTargetParticle;
                 #ifdef SHADOW_AND_SKY
                     #ifdef CLOUD_SHADOW
+                        #ifdef ABZA_FAR_NO_CLOUD_SHADOW
+                            if (waterDepth <= 1.0)
+                        #endif
                         shadow *= cloudShadow(waterWorldPos, shadowDirection);
                     #endif
                     shadow *= sunColor;
@@ -337,6 +350,13 @@ void main() {
                 float marchLength = abzaVLMarchLength(waterWorldDir, waterViewDepthNoLimit);
                 vec4 volumetricLight;
                 if (!abzaHalfResVL(marchLength, volumetricLight)) {
+                    #ifdef ABZA_FAR_LIGHT_SHAFTS
+                        #ifdef ABZA_FAR_SHADOW_MAP
+                            abzaVLFarShadowMap = abzaFarShadowReady();
+                            if (!abzaVLFarShadowMap)
+                        #endif
+                        abzaVLFarShade = abzaFarShaftRange(texcoord, waterViewPos / waterViewDepthNoLimit, fract(bayer64Temporal(gl_FragCoord.xy) + 0.618034));
+                    #endif
                     volumetricLight = abzaVolumetricLight(waterWorldDir, marchLength, bayer64Temporal(gl_FragCoord.xy));
                 }
                 solidColor.rgb = solidColor.rgb * volumetricLight.a + volumetricLight.rgb;

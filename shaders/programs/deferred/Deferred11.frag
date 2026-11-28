@@ -44,6 +44,9 @@ const float shadowDistance = 80.0; // [16.0 32.0 48.0 64.0 80.0 120.0 160.0 200.
 #include "/libs/Cloud.glsl"
 #include "/libs/GbufferData.glsl"
 #include "/libs/Shadow.glsl"
+#ifdef ABZA_FAR_TERRAIN
+    #include "/abza/FarShadow.glsl"
+#endif
 #include "/abza/Sky.glsl"
 #include "/abza/Sheen.glsl"
 
@@ -256,7 +259,12 @@ const float shadowDistance = 80.0; // [16.0 32.0 48.0 64.0 80.0 120.0 160.0 200.
             bool hit;
             #ifdef LOD
                 if (sampleDepth < 0.0) {
-                    hit = abs(sampleCoord.w + sampleDepth) < maximumThicknessLod && sampleDepth > -1.0;
+                    #ifdef ABZA_FAR_TERRAIN
+                        // Far terrain doesn't take part in screen-space shadows (the far shadow map shades it)
+                        hit = false;
+                    #else
+                        hit = abs(sampleCoord.w + sampleDepth) < maximumThicknessLod && sampleDepth > -1.0;
+                    #endif
                 }
                 else
             #endif
@@ -362,11 +370,18 @@ void main() {
             #endif
             #ifdef SHADOW_AND_SKY
                 #ifdef CLOUD_SHADOW
+                    #ifdef ABZA_FAR_NO_CLOUD_SHADOW
+                        if (gbufferData.depth >= 0.0)
+                    #endif
                     shadow *= cloudShadow(worldPos, shadowDirection);
                 #endif
             #endif
             vec3 subsurfaceScattering = vec3(float(gbufferData.porosity > 64.5 / 255.0)) * shadow * shadowDiffuse;
             shadow *= shadowDiffuse + shadowSpecular;
+            #ifdef ABZA_FAR_TERRAIN
+                vec3 abzaShadowBefore = shadow;
+                vec3 abzaSubsurfaceBefore = subsurfaceScattering;
+            #endif
             #ifdef PCSS
                 percentageCloserSoftShadow(
                     worldPos, worldGeoNormal, NdotL, 1.0 / viewLength, gbufferData.smoothness,
@@ -376,6 +391,12 @@ void main() {
                 singleSampleShadow(
                     worldPos, worldGeoNormal, NdotL, gbufferData.smoothness, gbufferData.porosity,
                     gbufferData.lightmap.y, shadow, subsurfaceScattering
+                );
+            #endif
+            #ifdef ABZA_FAR_TERRAIN
+                abzaFarShadow(
+                    worldPos, worldGeoNormal, NdotL, gbufferData.smoothness, gbufferData.porosity, gbufferData.lightmap.y, noise.y,
+                    abzaShadowBefore, abzaSubsurfaceBefore, shadow, subsurfaceScattering
                 );
             #endif
             shadow += subsurfaceScattering * abzaPlantGlow(viewDir, viewShadowDirection);

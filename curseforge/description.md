@@ -104,8 +104,8 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 <tr><th align="left">Preset</th><th align="left">What it sets</th></tr>
 <tr><td><strong>Low</strong></td><td>The clouds and your own shadow, with a 1024-pixel shadow map; no reflections, ambient occlusion, light shafts or fog</td></tr>
 <tr><td><strong>Medium</strong></td><td>Low with ambient occlusion, light shafts, fog, underwater caustics and puddles</td></tr>
-<tr><td><strong>High</strong> (<span style="color:#2dc26b"><strong>default</strong></span>)</td><td>Medium with reflections, soft, coloured and cloud shadows, depth of field and a 2048-pixel shadow map</td></tr>
-<tr><td><strong>Ultra</strong></td><td>High with a 4096-pixel shadow map and mob shadows</td></tr>
+<tr><td><strong>High</strong> (<span style="color:#2dc26b"><strong>default</strong></span>)</td><td>Medium with reflections, soft, coloured and cloud shadows and a 2048-pixel shadow map</td></tr>
+<tr><td><strong>Ultra</strong></td><td>High with depth of field, a 4096-pixel shadow map and mob shadows</td></tr>
 <tr><td><strong>ABZA</strong></td><td>High with "ABZA modpack" on</td></tr>
 </table>
 
@@ -120,14 +120,14 @@ The pack is dedicated to the ABZA modpack. It runs in other 1.20.1 Forge setups 
 <tr><th align="left">Requirement</th><th align="left">Version</th></tr>
 <tr><td><strong>Oculus</strong></td><td>1.8.0, with Embeddium</td></tr>
 <tr><td><strong>Distant Horizons</strong></td><td><span style="color:#3598db"><strong>Optional</strong></span>, tested with 3.3.2</td></tr>
-<tr><td><strong><a href="https://www.curseforge.com/minecraft/mc-mods/shaders-companion">Shaders Companion</a></strong></td><td><span style="color:#3598db"><strong>Optional</strong></span>, 2.0.0</td></tr>
+<tr><td><strong><a href="https://www.curseforge.com/minecraft/mc-mods/shaders-companion">Shaders Companion</a></strong></td><td><span style="color:#3598db"><strong>Optional</strong></span>, 3.0.0</td></tr>
 </table>
 
 ***
 
 ## With Shaders Companion
 
-The [Shaders Companion](https://www.curseforge.com/minecraft/mc-mods/shaders-companion) mod gives this pack what a shader pack can't see on its own: <span style="color:#2dc26b"><strong>real mirrors</strong></span> in water and glass, up to four at once, reflections of what is behind you, ambient occlusion that doesn't change as you turn, the Auto-PBR Material Engine and more. The mod installs its own copy of this pack with those options and a Max preset; in this download they are off. Its page has the details.
+The [Shaders Companion](https://www.curseforge.com/minecraft/mc-mods/shaders-companion) mod gives this pack what a shader pack can't see on its own: <span style="color:#2dc26b"><strong>far terrain</strong></span> past your render distance, lit and shadowed by this pack, <span style="color:#2dc26b"><strong>real mirrors</strong></span> in water and glass, up to four at once, reflections of what is behind you, ambient occlusion that doesn't change as you turn, the Auto-PBR Material Engine and more. The mod installs its own copy of this pack with those options and a Max preset; in this download they are off. Its page has the details.
 
 ***
 
